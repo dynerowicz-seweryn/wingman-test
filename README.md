@@ -1,0 +1,1 @@
+Solution to the Wingman application test (Exercicio 1).
