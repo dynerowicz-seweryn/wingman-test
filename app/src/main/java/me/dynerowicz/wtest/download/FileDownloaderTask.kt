@@ -1,21 +1,23 @@
 package me.dynerowicz.wtest.download
 
+import android.content.Context
 import android.os.AsyncTask
 import android.util.Log
-import me.dynerowicz.wtest.MainActivity
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLConnection
+import java.util.zip.GZIPInputStream
 
-//TODO: fix to make the server provide the Content-Length
-class FileDownloaderTask(private val activity: MainActivity)
+//TODO: Remove Accept-Encoding to handle the case where the content is gzipped
+class FileDownloaderTask(private val context: Context)
     : AsyncTask<URL, Int, Boolean>() {
 
     lateinit private var outputFile: File
 
     override fun onPreExecute() {
         super.onPreExecute()
-        activity.progressDialog.show()
+        //activity.progressDialog.show()
     }
 
     override fun onProgressUpdate(vararg values: Int?) {
@@ -23,20 +25,21 @@ class FileDownloaderTask(private val activity: MainActivity)
 
         if (values.isNotEmpty()) {
             val progress = values.first()
-            if(progress != null)
-                activity.progressDialog.progress = progress
+            progress?.let {
+                //activity.progressDialog.progress = progress
+            }
         }
     }
 
     override fun onPostExecute(downloadCompleted: Boolean) {
         super.onPostExecute(downloadCompleted)
 
-        activity.progressDialog.dismiss()
+        //activity.progressDialog.dismiss()
 
-        if(downloadCompleted)
-            activity.onFileAvailable(outputFile)
-        else
-            activity.onDownloadFailed()
+        //if(downloadCompleted)
+        //    activity.onFileAvailable(outputFile)
+        //else
+        //    activity.onDownloadFailed()
     }
 
     // TODO: handle resuming the download
@@ -50,62 +53,105 @@ class FileDownloaderTask(private val activity: MainActivity)
             }
         }
 
-        val filename = url.file.split('/').last()
-        Log.v(TAG, "Downloading file: $filename")
+        val (contentAvailable, contentLength) = retrieveContentLength(url)
 
-        outputFile = createTempFile(filename, null, activity.cacheDir)
+        var contentRetrieved = false
+        if(contentAvailable) {
+            val filename = url.file.split('/').last()
+            Log.v(TAG, "Downloading file: $filename")
 
-        return performDownload(url, outputFile)
+            outputFile = createTempFile(filename, null, context.cacheDir)
+
+            contentRetrieved = retrieveContentBody(url, contentLength, outputFile)
+        }
+
+        return contentRetrieved
     }
 
-    private fun performDownload(url: URL, outputFile: File): Boolean {
+    private fun retrieveContentLength(url: URL): Pair<Boolean, Long> {
+        val connection: HttpURLConnection
+
+        var contentAvailable = false
+        var contentLength = -1L
+
+        try {
+            // Open the connection and proceed with the download only on HTTP 200
+            Log.i(TAG, "Performing HEAD on $url")
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "HEAD"
+                setRequestProperty("Accept-Encoding", "identity")
+                connectTimeout = CONNECTION_TIMEOUT
+            }
+
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                contentAvailable = true
+                contentLength = connection.contentLength.toLong()
+                Log.v(TAG, "Full headers: ${connection.headerFields} ")
+                Log.d(TAG, "Content-Length: $contentLength")
+            } else
+                Log.e(TAG, "Response code: ${connection.responseCode}")
+        } catch (ioe: IOException) {
+            Log.e(TAG, "Connection error: $ioe")
+        }
+
+        return Pair(contentAvailable, contentLength)
+    }
+
+    private fun retrieveContentBody(url: URL, contentLength: Long, outputFile: File): Boolean {
         var downloadCompleted = false
 
         var connection: HttpURLConnection? = null
-        val contentLength: Int
-        var totalBytesDownloaded = 0
+
+        var currentProgress = 0
+        var totalBytesDownloaded = 0L
 
         var inputStream: InputStream? = null
         var outputStream: OutputStream? = null
 
         try {
-            //outputFile = activity.openFileOutput(DEFAULT_FILE_NAME, Context.MODE_PRIVATE)
             outputStream = outputFile.outputStream()
 
             try {
                 // Open the connection and proceed with the download only on HTTP 200
                 Log.d(TAG, "Downloading file at $url")
-                connection = (url.openConnection()).apply {
+                connection = (url.openConnection() as HttpURLConnection).apply {
                     readTimeout = READING_TIMEOUT
                     connectTimeout = CONNECTION_TIMEOUT
-                } as HttpURLConnection
+                    setRequestProperty("Accept-Encoding", "identity")
+                }
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    contentLength = connection.contentLength
                     Log.d(TAG, "Downloading using ${connection.headerFields} ")
-                    if(contentLength > 0)
-                        activity.progressDialog.max = 100
+
+                    //if(contentLength > 0)
+                        //activity.progressDialog.max = 100
 
                     try {
                         inputStream = BufferedInputStream(connection.inputStream)
-                        Log.d(TAG, "Input stream opened")
 
                         val buffer = ByteArray(BUFFER_SIZE)
                         var bytesRead: Int
 
                         do {
                             bytesRead = inputStream.read(buffer, 0, BUFFER_SIZE)
-                            Log.d(TAG, "Bytes read : $bytesRead)")
+                            //Log.v(TAG, "Bytes read : $bytesRead)")
 
                             if (bytesRead > 0) {
                                 totalBytesDownloaded += bytesRead
                                 outputStream.write(buffer, 0, bytesRead)
                             }
 
-                            if(contentLength > 0)
-                                publishProgress(totalBytesDownloaded * 100 / contentLength)
-                            else
-                                publishProgress(totalBytesDownloaded)
+                            val progressUpdate: Int =
+                                if (contentLength > 0)
+                                    (totalBytesDownloaded * 100L / contentLength).toInt()
+                                else
+                                    totalBytesDownloaded.toInt()
+
+                            if (progressUpdate != currentProgress) {
+                                Log.v(TAG, "ProgressUpdate: $totalBytesDownloaded bytes / $contentLength bytes [$progressUpdate%]")
+                                currentProgress = progressUpdate
+                                publishProgress(progressUpdate)
+                            }
 
                         } while (bytesRead != -1 && !isCancelled)
 
