@@ -3,4 +3,5 @@
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
     <string name="title_notifications">Notifications</string>
+    <string name="default_csv_url">https://raw.githubusercontent.com/centraldedados/codigos_postais/master/data/codigos_postais.csv</string>
 </resources>

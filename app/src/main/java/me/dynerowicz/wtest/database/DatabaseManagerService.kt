@@ -11,14 +11,14 @@ import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
 import me.dynerowicz.wtest.R
-import me.dynerowicz.wtest.tasks.FileDownloaderTask
-import me.dynerowicz.wtest.tasks.DownloadProgressListener
 import me.dynerowicz.wtest.tasks.CsvImportListener
 import me.dynerowicz.wtest.tasks.CsvImporterTask
+import me.dynerowicz.wtest.tasks.DownloadProgressListener
+import me.dynerowicz.wtest.tasks.FileDownloaderTask
 import java.io.File
+import java.net.URL
 
 class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportListener {
-
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
 
@@ -61,12 +61,14 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
             notificationBuilder.setContentText("Preparing download ...")
             startForeground(notificationId, notificationBuilder.build())
 
-            val outputFile = createTempFile(FILENAME, null, cacheDir)
-            cachedCsvFile = outputFile
-            FileDownloaderTask(outputFile, downloadProgressListener = this).execute()
+            val csvFile = createTempFile(FILENAME, null, cacheDir)
+            cachedCsvFile = csvFile
+            FileDownloaderTask(
+                url = URL(getString(R.string.default_csv_url)),
+                outputFile = csvFile,
+                downloadProgressListener = this
+            ).execute()
         }
-
-        database = databaseHelper.readableDatabase
 
         return START_NOT_STICKY
     }
@@ -109,20 +111,17 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
         notificationBuilder.setProgress(100, 100, false)
         notificationManager.notify(notificationId, notificationBuilder.build())
         cachedCsvFile.delete()
+
         managerSettings.edit().putBoolean(DATABASE_AVAILABLE, true).apply()
+
         stopForeground(true)
+        database.close()
+        database = databaseHelper.readableDatabase
     }
 
     companion object {
         const val TAG = "DatabaseManagerService"
         const val FILENAME = "postalCodes.csv"
         const val DATABASE_AVAILABLE = "DB_AVAILABLE"
-        const val DEFAULT_URL =
-                "https://raw.githubusercontent.com" +
-                        "/centraldedados" +
-                        "/codigos_postais" +
-                        "/master" +
-                        "/data" +
-                        "/codigos_postais.csv"
     }
 }

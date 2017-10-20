@@ -1,6 +1,7 @@
 package me.dynerowicz.wtest.database
 
 import android.database.sqlite.SQLiteDatabase
+import me.dynerowicz.wtest.tasks.CsvImporterTask
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -8,10 +9,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowApplication
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
-class DatabaseHelper1000EntriesTest {
+class DatabaseImporter1000EntriesTest {
 
     private lateinit var databaseHelper: DatabaseHelper
     lateinit var database: SQLiteDatabase
@@ -22,7 +24,14 @@ class DatabaseHelper1000EntriesTest {
         database = databaseHelper.writableDatabase
 
         val csvFile = File("app/src/test/resources/codigos_postais-1000.csv")
-        database.importFromCsv(csvFile)
+        val asyncTask = CsvImporterTask(database, csvFile, null)
+        asyncTask.execute()
+        ShadowApplication.runBackgroundTasks()
+
+        val (importedEntries, invalidEntries) = asyncTask.get()
+
+        Assert.assertTrue(importedEntries == 1000L)
+        Assert.assertTrue(invalidEntries == 0L)
     }
 
     @After

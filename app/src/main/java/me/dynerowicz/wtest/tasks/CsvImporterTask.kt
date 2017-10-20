@@ -11,7 +11,7 @@ import java.io.IOException
 class CsvImporterTask(
         private val database: SQLiteDatabase,
         private val csvFile: File,
-        private val importListener: CsvImportListener
+        private val importListener: CsvImportListener?
 ) : AsyncTask<Unit, Int, Pair<Long, Long>>() {
 
     private val insertStatement = database.compileStatement(DatabaseContract.INSERT_QUERY)
@@ -74,7 +74,7 @@ class CsvImporterTask(
                 validCsvHeader = localityIndex != -1 && postalCodeIndex != -1 && extensionIndex != -1
 
                 if (validCsvHeader) {
-                    importListener.onImportProgressUpdate(0)
+                    importListener?.onImportProgressUpdate(0)
 
                     database.beginTransaction()
 
@@ -103,10 +103,12 @@ class CsvImporterTask(
 
                             val progressUpdate = (importedEntriesCount * 100L / totalNumberOfEntries).toInt()
 
-                            if (progressUpdate != currentProgress) {
-                                Log.v(TAG, "ImportProgressUpdate: $importedEntriesCount / $totalNumberOfEntries entries [$progressUpdate%] (invalid=$invalidEntriesCount)")
-                                currentProgress = progressUpdate
-                                importListener.onImportProgressUpdate(progressUpdate)
+                            importListener?.let {
+                                if (currentProgress != progressUpdate) {
+                                    Log.v(TAG, "ImportProgressUpdate: $importedEntriesCount / $totalNumberOfEntries entries [$progressUpdate%] (invalid=$invalidEntriesCount)")
+                                    currentProgress = progressUpdate
+                                    importListener.onImportProgressUpdate(progressUpdate)
+                                }
                             }
 
                         } else {
@@ -125,7 +127,7 @@ class CsvImporterTask(
                 Log.e(TAG, "Invalid entries found in CSV files: $invalidEntriesCount")
         }
 
-        importListener.onImportComplete(Pair(importedEntriesCount, invalidEntriesCount))
+        importListener?.onImportComplete(Pair(importedEntriesCount, invalidEntriesCount))
         csvFileReader.close()
 
         return Pair(importedEntriesCount, invalidEntriesCount)

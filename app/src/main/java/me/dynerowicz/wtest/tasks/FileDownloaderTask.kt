@@ -5,18 +5,16 @@ import android.util.Log
 import java.io.File
 import java.net.URL
 
-import me.dynerowicz.wtest.database.DatabaseManagerService
 import me.dynerowicz.wtest.download.retrieveContentBody
 import me.dynerowicz.wtest.download.retrieveContentLength
 
 class FileDownloaderTask (
-    private val outputFile: File,
-    private val downloadProgressListener: DownloadProgressListener? = null
+        private val url: URL,
+        private val outputFile: File,
+        private val downloadProgressListener: DownloadProgressListener? = null
 ) : AsyncTask<Unit, Int, Boolean>() {
 
     override fun doInBackground(vararg p0: Unit?): Boolean {
-        val url = URL(DatabaseManagerService.DEFAULT_URL)
-
         val (contentAvailable, contentLength) = url.retrieveContentLength()
 
         var contentRetrieved = false
