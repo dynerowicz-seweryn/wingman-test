@@ -15,7 +15,7 @@ class FileDownloaderTask(private val activity: MainActivity)
 
     override fun onPreExecute() {
         super.onPreExecute()
-        activity.progressDialog?.show()
+        activity.progressDialog.show()
     }
 
     override fun onProgressUpdate(vararg values: Int?) {
@@ -24,17 +24,17 @@ class FileDownloaderTask(private val activity: MainActivity)
         if (values.isNotEmpty()) {
             val progress = values.first()
             if(progress != null)
-                activity.progressDialog?.progress = progress
+                activity.progressDialog.progress = progress
         }
     }
 
     override fun onPostExecute(downloadCompleted: Boolean) {
         super.onPostExecute(downloadCompleted)
 
-        activity.progressDialog?.dismiss()
+        activity.progressDialog.dismiss()
 
         if(downloadCompleted)
-            activity.onDownloadSucceeded(outputFile)
+            activity.onFileAvailable(outputFile)
         else
             activity.onDownloadFailed()
     }
@@ -84,7 +84,7 @@ class FileDownloaderTask(private val activity: MainActivity)
                     contentLength = connection.contentLength
                     Log.d(TAG, "Downloading using ${connection.headerFields} ")
                     if(contentLength > 0)
-                        activity.progressDialog?.max = 100
+                        activity.progressDialog.max = 100
 
                     try {
                         inputStream = BufferedInputStream(connection.inputStream)
