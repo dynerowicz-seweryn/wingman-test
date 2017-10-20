@@ -1,51 +1,38 @@
 package me.dynerowicz.wtest
 
-import android.app.ProgressDialog
-import android.database.sqlite.SQLiteDatabase
+import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.MenuItem
-import android.widget.Toast
-import com.opencsv.CSVReader
+import android.view.View
+
 import kotlinx.android.synthetic.main.activity_main.*
-import me.dynerowicz.wtest.database.DatabaseHelper
-import me.dynerowicz.wtest.database.importFromCsv
-import me.dynerowicz.wtest.database.insertPostalCode
-import me.dynerowicz.wtest.download.FileDownloaderTask
-import java.io.File
+import me.dynerowicz.wtest.database.DatabaseManagerService
+
+const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {
-    val TAG = MainActivity::class.java.simpleName
-
-    lateinit var progressDialog: ProgressDialog
-
-    lateinit var database: SQLiteDatabase
-    lateinit var fileDownloader: FileDownloaderTask
+    private lateinit var dbManagerIntent: Intent
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        dbManagerIntent = Intent(this, DatabaseManagerService::class.java)
+
         bottomNavigation.setOnNavigationItemSelectedListener(this)
+    }
 
-        progressDialog = ProgressDialog(this).apply {
-            setMessage("Downloading file")
-            isIndeterminate = true
-            setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
-            setCancelable(true)
+    fun onClick(view: View?) {
+        Log.v(TAG, "onClick: ${view?.id} [${buttonStartService.id}, ${buttonStopService.id}]")
+
+        when(view?.id) {
+            buttonStartService.id -> startService(dbManagerIntent)
+            buttonStopService.id  -> stopService(dbManagerIntent)
+            else -> Log.e(TAG, "Unknown view")
         }
-
-        database = DatabaseHelper(this).writableDatabase
-
-        val existingFile = cacheDir.listFiles().find { it.name.startsWith("codigos_postais.csv") }
-
-        if(existingFile == null) {
-            fileDownloader = FileDownloaderTask(this)
-            fileDownloader.execute()
-        } else
-            onFileAvailable(existingFile)
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -62,17 +49,5 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
 
         fieldMessage.setText(resourceId)
         return true
-    }
-
-    fun onFileAvailable(csvFile: File) {
-        Toast.makeText(this, "Download successful: ${csvFile.name}", Toast.LENGTH_LONG).show()
-        // Import the entries from the CSV file into the database
-        database.importFromCsv(csvFile)
-        // Delete the temporary file
-        csvFile.delete()
-    }
-
-    fun onDownloadFailed() {
-        Toast.makeText(this, "Download FAILED", Toast.LENGTH_LONG).show()
     }
 }

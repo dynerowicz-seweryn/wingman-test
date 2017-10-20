@@ -38,7 +38,6 @@ fun SQLiteDatabase.importFromCsv(csvFile: File): Pair<Int, Int> {
 
                     if (fields.size == fieldNames.size) {
                         try {
-                            // TODO: parse the CSV properly with no hard-coding ...
                             val locality = fields[localityIndex]
                             val postalCode = fields[postalCodeIndex].toInt()
                             val extension = fields[extensionIndex].toInt()

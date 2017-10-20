@@ -32,10 +32,44 @@ class DatabaseHelper20EntriesTest {
     }
 
     @Test
-    fun testHas20EntriesInDatabase() {
+    fun databaseHas20Entries() {
         val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME}"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 20)
+        cursor.close()
+    }
+
+    @Test
+    fun databaseContains3750043() {
+        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=43"
+        val cursor = database.rawQuery(query, null)
+        Assert.assertTrue(cursor.count == 1)
+        cursor.close()
+    }
+
+    @Test
+    fun databaseContains3750043ForAlmasDaAreosa() {
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=43"
+        val cursor = database.rawQuery(query, null)
+        cursor.moveToFirst()
+        Assert.assertTrue(cursor.getString(0) == "Almas da Areosa")
+        cursor.close()
+    }
+
+    @Test
+    fun databaseDoesNotContain3750902() {
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=902"
+        val cursor = database.rawQuery(query, null)
+        Assert.assertTrue(cursor.count == 0)
+        cursor.close()
+    }
+
+    @Test
+    fun databaseDoesNotContain3750016ForLandiosa() {
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=16"
+        val cursor = database.rawQuery(query, null)
+        cursor.moveToFirst()
+        Assert.assertTrue(cursor.getString(0) != "Landiosa")
         cursor.close()
     }
 }

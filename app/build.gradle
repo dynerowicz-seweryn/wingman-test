@@ -14,8 +14,15 @@ android {
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
-    sourceSets.test {
-        resources.srcDirs = ["src/test/resources"]
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            resources.srcDirs = ['src/main/res']
+        }
+        test {
+            java.srcDirs = ['src/test/java', 'src/main/java']
+            resources.srcDirs = ['src/test/resources', 'src/main/res']
+        }
     }
     buildTypes {
         release {

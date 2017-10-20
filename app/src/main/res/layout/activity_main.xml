@@ -26,6 +26,18 @@
 
     </FrameLayout>
 
+    <Button android:id="@+id/buttonStartService"
+        android:text="Start"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <Button android:id="@+id/buttonStopService"
+        android:text="Stop"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
     <android.support.design.widget.BottomNavigationView
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
