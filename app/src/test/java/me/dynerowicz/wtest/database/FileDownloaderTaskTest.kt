@@ -1,7 +1,7 @@
 package me.dynerowicz.wtest.database
 
 import me.dynerowicz.wtest.BuildConfig
-import me.dynerowicz.wtest.download.FileDownloaderTask
+import me.dynerowicz.wtest.tasks.FileDownloaderTask
 import org.junit.After
 import org.junit.Before
 import org.junit.Test

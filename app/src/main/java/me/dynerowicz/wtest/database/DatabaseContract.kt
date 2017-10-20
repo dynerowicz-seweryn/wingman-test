@@ -1,6 +1,5 @@
 package me.dynerowicz.wtest.database
 
-import android.database.sqlite.SQLiteStatement
 import android.provider.BaseColumns
 
 /** Contract describing the table used to encode the postal codes. */
@@ -30,14 +29,4 @@ object DatabaseContract {
             "${DatabaseContract.COLUMN_EXTENSION}, " +
             DatabaseContract.COLUMN_LOCALITY +
         ") VALUES (?,?,?)"
-}
-
-
-fun SQLiteStatement.execute(postalCode: Long, extension: Long, locality: String) {
-    clearBindings()
-    bindLong(1, postalCode)
-    bindLong(2, extension)
-    bindString(3, locality)
-    execute()
-    clearBindings()
 }

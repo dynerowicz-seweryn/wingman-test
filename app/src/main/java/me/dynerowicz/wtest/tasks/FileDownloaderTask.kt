@@ -1,4 +1,4 @@
-package me.dynerowicz.wtest.download
+package me.dynerowicz.wtest.tasks
 
 import android.os.AsyncTask
 import android.util.Log
@@ -6,22 +6,13 @@ import java.io.File
 import java.net.URL
 
 import me.dynerowicz.wtest.database.DatabaseManagerService
+import me.dynerowicz.wtest.download.retrieveContentBody
+import me.dynerowicz.wtest.download.retrieveContentLength
 
 class FileDownloaderTask (
     private val outputFile: File,
     private val downloadProgressListener: DownloadProgressListener? = null
 ) : AsyncTask<Unit, Int, Boolean>() {
-
-    override fun onProgressUpdate(vararg values: Int?) {
-        if (downloadProgressListener != null && values.isNotEmpty()) {
-            val newProgress = values.first()
-            newProgress?.let { downloadProgressListener.onDownloadProgressUpdate(newProgress) }
-        }
-    }
-
-    override fun onPostExecute(result: Boolean) {
-        downloadProgressListener?.onDownloadComplete(result)
-    }
 
     override fun doInBackground(vararg p0: Unit?): Boolean {
         val url = URL(DatabaseManagerService.DEFAULT_URL)
@@ -31,7 +22,7 @@ class FileDownloaderTask (
         var contentRetrieved = false
         if(contentAvailable) {
             val filename = url.file.split('/').last()
-            Log.v(FileDownloaderTask.TAG, "Downloading file: $filename")
+            Log.v(TAG, "Downloading file: $filename")
 
             contentRetrieved = url.retrieveContentBody(contentLength, outputFile, listener = downloadProgressListener)
         }

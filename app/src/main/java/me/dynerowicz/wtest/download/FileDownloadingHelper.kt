@@ -1,6 +1,7 @@
 package me.dynerowicz.wtest.download
 
 import android.util.Log
+import me.dynerowicz.wtest.tasks.DownloadProgressListener
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URL
@@ -9,13 +10,6 @@ const val TAG = "URL"
 const val CONNECTION_TIMEOUT = 3000
 const val READING_TIMEOUT = 3000
 const val BUFFER_SIZE = 64 * 1024
-
-val NEWLINE = '\n'.toByte()
-
-interface DownloadProgressListener {
-    fun onDownloadProgressUpdate(new: Int)
-    fun onDownloadComplete(result: Boolean)
-}
 
 //TODO: Remove Accept-Encoding=identity to handle the case where the content is gzipped
 fun URL.retrieveContentLength(): Pair<Boolean, Long> {
@@ -53,7 +47,6 @@ fun URL.retrieveContentBody(contentLength: Long, outputFile: File, listener: Dow
     var connection: HttpURLConnection? = null
 
     var currentProgress = 0
-    var numberOfLines = 0
     var totalBytesDownloaded = 0L
 
     var inputStream: InputStream? = null
@@ -88,9 +81,6 @@ fun URL.retrieveContentBody(contentLength: Long, outputFile: File, listener: Dow
 
                         if (bytesRead > 0) {
                             totalBytesDownloaded += bytesRead
-                            for(idx in 0 .. bytesRead)
-                                if (buffer[idx] == NEWLINE)
-                                    numberOfLines += 1
                             outputStream.write(buffer, 0, bytesRead)
                         }
 
@@ -128,6 +118,8 @@ fun URL.retrieveContentBody(contentLength: Long, outputFile: File, listener: Dow
         // If the output file was successfully opened, close it and delete the partial content if the download did not succeed
         outputStream?.close()
     }
+
+    listener?.onDownloadComplete(downloadCompleted)
 
     Log.i(TAG, "Total bytes downloaded: $totalBytesDownloaded")
     Log.i(TAG, "Saved to : ${outputFile.name}")

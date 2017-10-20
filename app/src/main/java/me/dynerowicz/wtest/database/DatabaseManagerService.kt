@@ -11,11 +11,13 @@ import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
 import me.dynerowicz.wtest.R
-import me.dynerowicz.wtest.download.FileDownloaderTask
-import me.dynerowicz.wtest.download.DownloadProgressListener
+import me.dynerowicz.wtest.tasks.FileDownloaderTask
+import me.dynerowicz.wtest.tasks.DownloadProgressListener
+import me.dynerowicz.wtest.tasks.CsvImportListener
+import me.dynerowicz.wtest.tasks.CsvImporterTask
 import java.io.File
 
-class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgressListener {
+class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportListener {
 
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
@@ -60,8 +62,8 @@ class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgre
             startForeground(notificationId, notificationBuilder.build())
 
             val outputFile = createTempFile(FILENAME, null, cacheDir)
-            FileDownloaderTask(outputFile, downloadProgressListener = this).execute()
             cachedCsvFile = outputFile
+            FileDownloaderTask(outputFile, downloadProgressListener = this).execute()
         }
 
         database = databaseHelper.readableDatabase
@@ -76,6 +78,7 @@ class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgre
     override fun onDestroy() {
         Log.v(TAG, "onDestroy")
         cachedCsvFile.delete()
+        stopForeground(true)
         super.onDestroy()
     }
 
@@ -85,12 +88,13 @@ class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgre
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
-    override fun onDownloadComplete(result: Boolean) {
-        if (result) {
+    override fun onDownloadComplete(success: Boolean) {
+        if (success) {
             notificationBuilder.setContentText("Preparing CSV import ...")
             notificationBuilder.setProgress(100, 0, true)
             notificationManager.notify(notificationId, notificationBuilder.build())
-            database.importFromCsv(cachedCsvFile, listener = this)
+
+            CsvImporterTask(database, cachedCsvFile, importListener = this).execute()
         }
     }
 
@@ -106,9 +110,11 @@ class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgre
         notificationManager.notify(notificationId, notificationBuilder.build())
         cachedCsvFile.delete()
         managerSettings.edit().putBoolean(DATABASE_AVAILABLE, true).apply()
+        stopForeground(true)
     }
 
     companion object {
+        const val TAG = "DatabaseManagerService"
         const val FILENAME = "postalCodes.csv"
         const val DATABASE_AVAILABLE = "DB_AVAILABLE"
         const val DEFAULT_URL =
