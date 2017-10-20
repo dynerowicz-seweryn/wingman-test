@@ -1,7 +1,6 @@
 package me.dynerowicz.wtest.database
 
-import android.content.ContentValues
-import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteStatement
 import android.provider.BaseColumns
 
 /** Contract describing the table used to encode the postal codes. */
@@ -26,13 +25,19 @@ object DatabaseContract {
 
     const val DROP_TABLE_STATEMENT = "DROP TABLE IF EXISTS ${DatabaseContract.TABLE_NAME}"
 
+    const val INSERT_QUERY = "INSERT into ${DatabaseContract.TABLE_NAME} (" +
+            "${DatabaseContract.COLUMN_POSTAL_CODE}, " +
+            "${DatabaseContract.COLUMN_EXTENSION}, " +
+            DatabaseContract.COLUMN_LOCALITY +
+        ") VALUES (?,?,?)"
 }
 
-fun SQLiteDatabase.insertPostalCode(postalCode: Int, extension: Int, locality: String) {
-    insert(DatabaseContract.TABLE_NAME, null,
-        ContentValues().apply {
-            put(DatabaseContract.COLUMN_POSTAL_CODE, postalCode)
-            put(DatabaseContract.COLUMN_EXTENSION, extension)
-            put(DatabaseContract.COLUMN_LOCALITY, locality)
-        })
+
+fun SQLiteStatement.execute(postalCode: Long, extension: Long, locality: String) {
+    clearBindings()
+    bindLong(1, postalCode)
+    bindLong(2, extension)
+    bindString(3, locality)
+    execute()
+    clearBindings()
 }

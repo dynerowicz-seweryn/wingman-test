@@ -9,35 +9,34 @@ import me.dynerowicz.wtest.database.DatabaseManagerService
 
 class FileDownloaderTask (
     private val outputFile: File,
-    private val progressListener: ProgressListener? = null
-) : AsyncTask<Unit, Int, Pair<Boolean, Int>>() {
+    private val downloadProgressListener: DownloadProgressListener? = null
+) : AsyncTask<Unit, Int, Boolean>() {
 
     override fun onProgressUpdate(vararg values: Int?) {
-        if (progressListener != null && values.isNotEmpty()) {
+        if (downloadProgressListener != null && values.isNotEmpty()) {
             val newProgress = values.first()
-            newProgress?.let { progressListener.onProgressUpdate(newProgress) }
+            newProgress?.let { downloadProgressListener.onDownloadProgressUpdate(newProgress) }
         }
     }
 
-    override fun onPostExecute(result: Pair<Boolean, Int>) {
-        progressListener?.onDownloadComplete(result)
+    override fun onPostExecute(result: Boolean) {
+        downloadProgressListener?.onDownloadComplete(result)
     }
 
-    override fun doInBackground(vararg p0: Unit?): Pair<Boolean, Int> {
+    override fun doInBackground(vararg p0: Unit?): Boolean {
         val url = URL(DatabaseManagerService.DEFAULT_URL)
 
         val (contentAvailable, contentLength) = url.retrieveContentLength()
 
-        var operationResult: Pair<Boolean, Int> = Pair(false, 0)
-
+        var contentRetrieved = false
         if(contentAvailable) {
             val filename = url.file.split('/').last()
             Log.v(FileDownloaderTask.TAG, "Downloading file: $filename")
 
-            operationResult = url.retrieveContentBody(contentLength, outputFile, progressListener = progressListener)
+            contentRetrieved = url.retrieveContentBody(contentLength, outputFile, listener = downloadProgressListener)
         }
 
-        return operationResult
+        return contentRetrieved
     }
 
     companion object {

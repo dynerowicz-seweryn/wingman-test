@@ -12,17 +12,17 @@ import android.preference.PreferenceManager
 import android.util.Log
 import me.dynerowicz.wtest.R
 import me.dynerowicz.wtest.download.FileDownloaderTask
-import me.dynerowicz.wtest.download.ProgressListener
+import me.dynerowicz.wtest.download.DownloadProgressListener
 import java.io.File
 
-class DatabaseManagerService : Service(), ProgressListener {
+class DatabaseManagerService : Service(), DownloadProgressListener, ImportProgressListener {
 
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
 
     private lateinit var managerSettings: SharedPreferences
     private var databaseAvailable = false
-    private var cachedCsvFile: File? = null
+    private lateinit var cachedCsvFile: File
 
     // Notification channel
     private val notificationId = 42
@@ -54,11 +54,13 @@ class DatabaseManagerService : Service(), ProgressListener {
         Log.v(TAG, "onStartCommand")
         if(!databaseAvailable) {
 
+            database = databaseHelper.writableDatabase
+
             notificationBuilder.setContentText("Preparing download ...")
             startForeground(notificationId, notificationBuilder.build())
 
             val outputFile = createTempFile(FILENAME, null, cacheDir)
-            FileDownloaderTask(outputFile, progressListener = this).execute()
+            FileDownloaderTask(outputFile, downloadProgressListener = this).execute()
             cachedCsvFile = outputFile
         }
 
@@ -73,27 +75,37 @@ class DatabaseManagerService : Service(), ProgressListener {
 
     override fun onDestroy() {
         Log.v(TAG, "onDestroy")
-        cachedCsvFile?.delete()
+        cachedCsvFile.delete()
         super.onDestroy()
     }
 
-    override fun onProgressUpdate(new: Int) {
+    override fun onDownloadProgressUpdate(new: Int) {
         notificationBuilder.setContentText("Download in progress : $new %")
         notificationBuilder.setProgress(100, new, false)
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
-    override fun onDownloadComplete(result: Pair<Boolean, Int>) {
-        val (contentRetrieved, numberOfLines) = result
-        if (contentRetrieved) {
-            notificationBuilder.setContentText("Preparing CSV import of ${numberOfLines - 1} CSV entries ...")
+    override fun onDownloadComplete(result: Boolean) {
+        if (result) {
+            notificationBuilder.setContentText("Preparing CSV import ...")
             notificationBuilder.setProgress(100, 0, true)
             notificationManager.notify(notificationId, notificationBuilder.build())
-            // Move on to the importation process
-            //database.importFromCsv(csvFile)
+            database.importFromCsv(cachedCsvFile, listener = this)
         }
-        cachedCsvFile?.delete()
+    }
 
+    override fun onImportProgressUpdate(new: Int) {
+        notificationBuilder.setContentText("Importing CSV entries : $new %")
+        notificationBuilder.setProgress(100, new, false)
+        notificationManager.notify(notificationId, notificationBuilder.build())
+    }
+
+    override fun onImportComplete(result: Pair<Long, Long>) {
+        notificationBuilder.setContentText("Import complete.")
+        notificationBuilder.setProgress(100, 100, false)
+        notificationManager.notify(notificationId, notificationBuilder.build())
+        cachedCsvFile.delete()
+        managerSettings.edit().putBoolean(DATABASE_AVAILABLE, true).apply()
     }
 
     companion object {

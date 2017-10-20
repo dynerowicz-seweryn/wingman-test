@@ -12,9 +12,9 @@ const val BUFFER_SIZE = 64 * 1024
 
 val NEWLINE = '\n'.toByte()
 
-interface ProgressListener {
-    fun onProgressUpdate(new: Int)
-    fun onDownloadComplete(result: Pair<Boolean, Int>)
+interface DownloadProgressListener {
+    fun onDownloadProgressUpdate(new: Int)
+    fun onDownloadComplete(result: Boolean)
 }
 
 //TODO: Remove Accept-Encoding=identity to handle the case where the content is gzipped
@@ -47,7 +47,7 @@ fun URL.retrieveContentLength(): Pair<Boolean, Long> {
     return Pair(contentAvailable, contentLength)
 }
 
-fun URL.retrieveContentBody(contentLength: Long, outputFile: File, progressListener: ProgressListener? = null): Pair<Boolean, Int> {
+fun URL.retrieveContentBody(contentLength: Long, outputFile: File, listener: DownloadProgressListener? = null): Boolean {
     var downloadCompleted = false
 
     var connection: HttpURLConnection? = null
@@ -95,15 +95,15 @@ fun URL.retrieveContentBody(contentLength: Long, outputFile: File, progressListe
                         }
 
                         val progressUpdate: Int =
-                                if (contentLength > 0)
-                                    (totalBytesDownloaded * 100L / contentLength).toInt()
-                                else
-                                    totalBytesDownloaded.toInt()
+                            if (contentLength > 0)
+                                (totalBytesDownloaded * 100L / contentLength).toInt()
+                            else
+                                totalBytesDownloaded.toInt()
 
                         if (progressUpdate != currentProgress) {
                             Log.v(TAG, "ProgressUpdate: $totalBytesDownloaded bytes / $contentLength bytes [$progressUpdate%]")
                             currentProgress = progressUpdate
-                            progressListener?.onProgressUpdate(progressUpdate)
+                            listener?.onDownloadProgressUpdate(progressUpdate)
                         }
 
                     } while (bytesRead != -1)
@@ -132,5 +132,5 @@ fun URL.retrieveContentBody(contentLength: Long, outputFile: File, progressListe
     Log.i(TAG, "Total bytes downloaded: $totalBytesDownloaded")
     Log.i(TAG, "Saved to : ${outputFile.name}")
 
-    return Pair(downloadCompleted, numberOfLines)
+    return downloadCompleted
 }
