@@ -1,7 +1,14 @@
 <resources>
     <string name="app_name">WTest</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+    <string name="title_search">Search</string>
+    <string name="title_settings">Settings</string>
+
     <string name="default_csv_url">https://raw.githubusercontent.com/centraldedados/codigos_postais/master/data/codigos_postais.csv</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="search">Search query</string>
+    <string name="searchHint">Postal code, extension, locality</string>
+    <string name="DatabaseInitialization">Database initialization in progress</string>
+    <string name="PleaseWait">Please wait ...</string>
+    <string name="SearchInProgress">Search in progress ...</string>
 </resources>

@@ -1,53 +1,114 @@
 package me.dynerowicz.wtest
 
-import android.content.Intent
+import android.app.ProgressDialog
+import android.content.*
 import android.os.Bundle
+import android.os.IBinder
 import android.support.design.widget.BottomNavigationView
+import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.MenuItem
-import android.view.View
-
 import kotlinx.android.synthetic.main.activity_main.*
 import me.dynerowicz.wtest.database.DatabaseManagerService
 
-const val TAG = "MainActivity"
+class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener, ServiceConnection {
 
-class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemSelectedListener {
     private lateinit var dbManagerIntent: Intent
+    private var dbManagerBinder: DatabaseManagerService.DatabaseManagerBinder? = null
+
+    private val dbManagerReceiver = DbManagerServiceBroadcastReceiver()
+    private val dbManagerIntentFilter = IntentFilter()
+
+    init {
+        dbManagerIntentFilter.addAction(DatabaseManagerService.DB_INITIALIZED)
+        dbManagerIntentFilter.addAction(DatabaseManagerService.DB_INITIALIZING)
+    }
+
+    private val search = SearchFragment()
+    private val settings = SettingsFragment()
+
+    private var currentFragment: Fragment = search
+
+    override fun onStart() {
+        super.onStart()
+
+        registerReceiver(dbManagerReceiver, dbManagerIntentFilter)
+
+        dbManagerIntent = Intent(this, DatabaseManagerService::class.java)
+        bindService(dbManagerIntent, this, Context.BIND_AUTO_CREATE)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        dbManagerIntent = Intent(this, DatabaseManagerService::class.java)
-
         bottomNavigation.setOnNavigationItemSelectedListener(this)
+
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, currentFragment)
+            .commit()
     }
 
-    fun onClick(view: View?) {
-        Log.v(TAG, "onClick: ${view?.id} [${buttonStartService.id}, ${buttonStopService.id}]")
-
-        when(view?.id) {
-            buttonStartService.id -> startService(dbManagerIntent)
-            buttonStopService.id  -> stopService(dbManagerIntent)
-            else -> Log.e(TAG, "Unknown view")
-        }
+    override fun onStop() {
+        unregisterReceiver(dbManagerReceiver)
+        unbindService(this)
+        super.onStop()
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        val resourceId =
+        val newFragment: Fragment? =
             when (item.itemId) {
-                R.id.navigation_home -> R.string.title_home
-                R.id.navigation_dashboard -> R.string.title_dashboard
-                R.id.navigation_notifications -> R.string.title_notifications
-                else -> -1
+                R.id.navigation_search -> search
+                R.id.navigation_settings -> settings
+                else -> null
             }
 
-        if (resourceId == -1)
-            return false
+        newFragment?.let {
+            if (currentFragment != newFragment) {
+                currentFragment = newFragment
+                supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragmentContainer, currentFragment)
+                        .commit()
+            }
+            return true
+        }
 
-        fieldMessage.setText(resourceId)
-        return true
+        return false
+    }
+
+    override fun onServiceDisconnected(p0: ComponentName?) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun onServiceConnected(className: ComponentName?, binder: IBinder?) {
+        Log.i(TAG, "onServiceConnected")
+        dbManagerBinder = binder as DatabaseManagerService.DatabaseManagerBinder
+        startService(dbManagerIntent)
+    }
+
+    inner class DbManagerServiceBroadcastReceiver : BroadcastReceiver() {
+        private var initializationInProgress: ProgressDialog? = null
+
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val action = intent?.action
+            when (action) {
+                DatabaseManagerService.DB_INITIALIZING ->
+                    initializationInProgress = ProgressDialog.show(
+                                        context,
+                                        context?.getString(R.string.DatabaseInitialization),
+                                        context?.getString(R.string.PleaseWait),
+                                        true)
+
+                DatabaseManagerService.DB_INITIALIZED -> {
+                    initializationInProgress?.dismiss()
+                    search.database = dbManagerBinder?.getDatabase()
+                }
+            }
+        }
+    }
+
+    companion object {
+        const val TAG = "MainActivity"
     }
 }

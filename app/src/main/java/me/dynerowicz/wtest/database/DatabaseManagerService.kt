@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.database.sqlite.SQLiteDatabase
+import android.os.Binder
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
@@ -23,8 +24,11 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
     private lateinit var database: SQLiteDatabase
 
     private lateinit var managerSettings: SharedPreferences
-    private var databaseAvailable = false
+    private var databaseInitialized = false
     private lateinit var cachedCsvFile: File
+
+    private var downloader: FileDownloaderTask? = null
+    private var importer: CsvImporterTask? = null
 
     // Notification channel
     private val notificationId = 42
@@ -38,7 +42,7 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
 
         managerSettings = PreferenceManager.getDefaultSharedPreferences(this)
 
-        databaseAvailable = managerSettings.contains(DATABASE_AVAILABLE)
+        databaseInitialized = managerSettings.contains(DATABASE_INITIALIZED)
 
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationBuilder = Notification.Builder(this).apply {
@@ -47,41 +51,47 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
             setProgress(100, 0, true)
         }
 
-        Log.v(TAG, "onCreate [databaseAvailable=$databaseAvailable]")
+        Log.v(TAG, "onCreate [databaseInitialized=$databaseInitialized]")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
         Log.v(TAG, "onStartCommand")
-        if(!databaseAvailable) {
-
-            database = databaseHelper.writableDatabase
-
-            notificationBuilder.setContentText("Preparing download ...")
-            startForeground(notificationId, notificationBuilder.build())
-
-            val csvFile = createTempFile(FILENAME, null, cacheDir)
-            cachedCsvFile = csvFile
-            FileDownloaderTask(
-                url = URL(getString(R.string.default_csv_url)),
-                outputFile = csvFile,
-                downloadProgressListener = this
-            ).execute()
+        if(!databaseInitialized)
+            initializeDatabase()
+        else {
+            database = databaseHelper.readableDatabase
+            sendBroadcast(DatabaseInitializedBroadcast)
         }
 
         return START_NOT_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun onBind(intent: Intent?): IBinder = DatabaseManagerBinder()
 
     override fun onDestroy() {
         Log.v(TAG, "onDestroy")
-        cachedCsvFile.delete()
-        stopForeground(true)
+        downloader?.cancel(true)
+        importer?.cancel(true)
         super.onDestroy()
+    }
+
+    private fun initializeDatabase() {
+        sendBroadcast(DatabaseInitializingBroadcast)
+
+        database = databaseHelper.writableDatabase
+
+        notificationBuilder.setContentText("Preparing download ...")
+        startForeground(notificationId, notificationBuilder.build())
+
+        val csvFile = createTempFile(FILENAME, null, cacheDir)
+        cachedCsvFile = csvFile
+
+        downloader = FileDownloaderTask(URL(getString(R.string.default_csv_url)), csvFile, downloadProgressListener = this)
+        importer = CsvImporterTask(database, cachedCsvFile, importListener = this)
+
+        downloader?.execute()
     }
 
     override fun onDownloadProgressUpdate(new: Int) {
@@ -96,8 +106,14 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
             notificationBuilder.setProgress(100, 0, true)
             notificationManager.notify(notificationId, notificationBuilder.build())
 
-            CsvImporterTask(database, cachedCsvFile, importListener = this).execute()
+            importer?.execute()
         }
+    }
+
+    override fun onDownloadCancelled() {
+        notificationBuilder.setContentText("Download cancelled.")
+        notificationManager.notify(notificationId, notificationBuilder.build())
+        cachedCsvFile.delete()
     }
 
     override fun onImportProgressUpdate(new: Int) {
@@ -110,18 +126,37 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
         notificationBuilder.setContentText("Import complete.")
         notificationBuilder.setProgress(100, 100, false)
         notificationManager.notify(notificationId, notificationBuilder.build())
+
+        managerSettings.edit().putBoolean(DATABASE_INITIALIZED, true).apply()
+
         cachedCsvFile.delete()
-
-        managerSettings.edit().putBoolean(DATABASE_AVAILABLE, true).apply()
-
         stopForeground(true)
         database.close()
         database = databaseHelper.readableDatabase
+
+        sendBroadcast(DatabaseInitializedBroadcast)
+    }
+
+    override fun onImportCancelled() {
+        notificationBuilder.setContentText("Import cancelled.")
+        notificationManager.notify(notificationId, notificationBuilder.build())
+        cachedCsvFile.delete()
+    }
+
+    inner class DatabaseManagerBinder : Binder() {
+        fun getService(): DatabaseManagerService = this@DatabaseManagerService
+        fun getDatabase() = database
     }
 
     companion object {
-        const val TAG = "DatabaseManagerService"
-        const val FILENAME = "postalCodes.csv"
-        const val DATABASE_AVAILABLE = "DB_AVAILABLE"
+        private const val TAG = "DatabaseManagerService"
+        private const val FILENAME = "postalCodes.csv"
+        private const val DATABASE_INITIALIZED = "DatabaseInitialized"
+
+        val DB_INITIALIZING = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZING"
+        val DB_INITIALIZED  = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZED"
+
+        private val DatabaseInitializingBroadcast = Intent(DB_INITIALIZING)
+        private val DatabaseInitializedBroadcast  = Intent(DB_INITIALIZED)
     }
 }

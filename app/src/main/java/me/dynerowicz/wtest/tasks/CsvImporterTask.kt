@@ -14,8 +14,6 @@ class CsvImporterTask(
         private val importListener: CsvImportListener?
 ) : AsyncTask<Unit, Int, Pair<Long, Long>>() {
 
-    private val insertStatement = database.compileStatement(DatabaseContract.INSERT_QUERY)
-
     private fun determineEntryCount(csvFile: File): Long {
         val reader = csvFile.bufferedReader()
 
@@ -34,16 +32,22 @@ class CsvImporterTask(
         return numberOfLines
     }
 
-    //TODO: this is not very clean
-    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) {
-        with(insertStatement) {
-            clearBindings()
-            bindLong(1, postalCode)
-            bindLong(2, extension)
-            bindString(3, locality)
-            execute()
-            clearBindings()
+    override fun onPostExecute(result: Pair<Long, Long>) {
+        super.onPostExecute(result)
+        importListener?.onImportComplete(result)
+    }
+
+    override fun onProgressUpdate(vararg values: Int?) {
+        super.onProgressUpdate(*values)
+        if(values.isNotEmpty()) {
+            val progressUpdate = values.first()
+            if(progressUpdate != null)
+                importListener?.onImportProgressUpdate(progressUpdate)
         }
+    }
+
+    override fun onCancelled() {
+        importListener?.onImportCancelled()
     }
 
     override fun doInBackground(vararg p0: Unit?): Pair<Long, Long> {
@@ -58,13 +62,12 @@ class CsvImporterTask(
 
         var lineNumber = 0
         val fieldNames: Array<String>
+
         if (parserIterator.hasNext()) {
             fieldNames = parserIterator.next()
             lineNumber += 1
 
             var validCsvHeader = fieldNames.size == DatabaseContract.CSV_NUMBER_OF_FIELDS
-
-            var fields: Array<String>
 
             if(validCsvHeader) {
                 val localityIndex = fieldNames.indexOf(DatabaseContract.CSV_LOCALITY)
@@ -76,26 +79,26 @@ class CsvImporterTask(
                 if (validCsvHeader) {
                     importListener?.onImportProgressUpdate(0)
 
+                    var fields: Array<String>
+
                     database.beginTransaction()
 
-                    while (parserIterator.hasNext()) {
+                    while (parserIterator.hasNext() && !isCancelled) {
                         fields = parserIterator.next()
                         lineNumber += 1
 
-                        if (fields.size == fieldNames.size) {
+                        if (fields.size == DatabaseContract.CSV_NUMBER_OF_FIELDS) {
                             try {
                                 val locality = fields[localityIndex]
                                 val postalCode = fields[postalCodeIndex].toLong()
                                 val extension = fields[extensionIndex].toLong()
-
                                 insertPostalCode(postalCode, extension, locality)
-
                             } catch (nfe: NumberFormatException) {
                                 Log.v(TAG, "Error at line $lineNumber: $nfe")
                             }
                             importedEntriesCount += 1
 
-                            if (importedEntriesCount.rem(5000) == 0L) {
+                            if (importedEntriesCount.rem(10000) == 0L) {
                                 database.setTransactionSuccessful()
                                 database.endTransaction()
                                 database.beginTransaction()
@@ -107,7 +110,7 @@ class CsvImporterTask(
                                 if (currentProgress != progressUpdate) {
                                     Log.v(TAG, "ImportProgressUpdate: $importedEntriesCount / $totalNumberOfEntries entries [$progressUpdate%] (invalid=$invalidEntriesCount)")
                                     currentProgress = progressUpdate
-                                    importListener.onImportProgressUpdate(progressUpdate)
+                                    publishProgress(currentProgress)
                                 }
                             }
 
@@ -127,10 +130,22 @@ class CsvImporterTask(
                 Log.e(TAG, "Invalid entries found in CSV files: $invalidEntriesCount")
         }
 
-        importListener?.onImportComplete(Pair(importedEntriesCount, invalidEntriesCount))
         csvFileReader.close()
 
         return Pair(importedEntriesCount, invalidEntriesCount)
+    }
+
+    // Database insertion operation
+    private val insertStatement = database.compileStatement(DatabaseContract.INSERT_QUERY)
+    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) {
+        with(insertStatement) {
+            clearBindings()
+            bindLong(1, postalCode)
+            bindLong(2, extension)
+            bindString(3, locality)
+            execute()
+            clearBindings()
+        }
     }
 
     companion object {
