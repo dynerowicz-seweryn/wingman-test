@@ -3,8 +3,8 @@ package me.dynerowicz.wtest.tasks
 import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.util.Log
-import com.opencsv.CSVReader
 import me.dynerowicz.wtest.database.DatabaseContract
+import me.dynerowicz.wtest.utils.parseCsvLine
 import java.io.File
 import java.io.IOException
 
@@ -51,8 +51,7 @@ class CsvImporterTask(
     }
 
     override fun doInBackground(vararg p0: Unit?): Pair<Long, Long> {
-        val csvFileReader = CSVReader(csvFile.bufferedReader())
-        val parserIterator = csvFileReader.iterator()
+        val csvFileReader = csvFile.bufferedReader()
 
         val totalNumberOfEntries = determineEntryCount(csvFile)
 
@@ -61,37 +60,32 @@ class CsvImporterTask(
         var invalidEntriesCount = 0L
 
         var lineNumber = 0
-        val fieldNames: Array<String>
+        val fields = Array(3) { StringBuilder() }
 
-        if (parserIterator.hasNext()) {
-            fieldNames = parserIterator.next()
+        if (csvFileReader.ready()) {
+            val fieldNameCount = fields.parseCsvLine(csvFileReader.readLine(), 0, 11, 12)
             lineNumber += 1
 
-            var validCsvHeader = fieldNames.size == DatabaseContract.CSV_NUMBER_OF_FIELDS
+            if(fieldNameCount == DatabaseContract.CSV_NUMBER_OF_FIELDS) {
+                val field0 = fields[0].toString()
+                val field11 = fields[1].toString()
+                val field12 = fields[2].toString()
 
-            if(validCsvHeader) {
-                val localityIndex = fieldNames.indexOf(DatabaseContract.CSV_LOCALITY)
-                val postalCodeIndex = fieldNames.indexOf(DatabaseContract.CSV_POSTAL_CODE)
-                val extensionIndex = fieldNames.indexOf(DatabaseContract.CSV_EXTENSION)
-
-                validCsvHeader = localityIndex != -1 && postalCodeIndex != -1 && extensionIndex != -1
-
-                if (validCsvHeader) {
-                    importListener?.onImportProgressUpdate(0)
-
-                    var fields: Array<String>
+                Log.v(TAG, "Found $field0, $field11, $field12")
+                if (field0 == DatabaseContract.CSV_LOCALITY && field11 == DatabaseContract.CSV_POSTAL_CODE && field12 == DatabaseContract.CSV_EXTENSION) {
+                    publishProgress(0)
 
                     database.beginTransaction()
 
-                    while (parserIterator.hasNext() && !isCancelled) {
-                        fields = parserIterator.next()
+                    while (csvFileReader.ready() && !isCancelled) {
+                        val fieldCount = fields.parseCsvLine(csvFileReader.readLine(), 0, 11, 12)
                         lineNumber += 1
 
-                        if (fields.size == DatabaseContract.CSV_NUMBER_OF_FIELDS) {
+                        if (fieldCount == DatabaseContract.CSV_NUMBER_OF_FIELDS) {
                             try {
-                                val locality = fields[localityIndex]
-                                val postalCode = fields[postalCodeIndex].toLong()
-                                val extension = fields[extensionIndex].toLong()
+                                val locality = fields[0].toString()
+                                val postalCode = fields[1].toString().toLong()
+                                val extension = fields[2].toString().toLong()
                                 insertPostalCode(postalCode, extension, locality)
                             } catch (nfe: NumberFormatException) {
                                 Log.v(TAG, "Error at line $lineNumber: $nfe")
@@ -106,16 +100,14 @@ class CsvImporterTask(
 
                             val progressUpdate = (importedEntriesCount * 100L / totalNumberOfEntries).toInt()
 
-                            importListener?.let {
-                                if (currentProgress != progressUpdate) {
-                                    Log.v(TAG, "ImportProgressUpdate: $importedEntriesCount / $totalNumberOfEntries entries [$progressUpdate%] (invalid=$invalidEntriesCount)")
-                                    currentProgress = progressUpdate
-                                    publishProgress(currentProgress)
-                                }
+                            if (currentProgress != progressUpdate) {
+                                Log.v(TAG, "ImportProgressUpdate: $importedEntriesCount / $totalNumberOfEntries entries [$progressUpdate%] (invalid=$invalidEntriesCount)")
+                                currentProgress = progressUpdate
+                                publishProgress(currentProgress)
                             }
 
                         } else {
-                            Log.e(TAG, "Ill-formed CSV file@line $lineNumber]: $fieldNames")
+                            Log.e(TAG, "Ill-formed CSV file@line $lineNumber]: $fields")
                             invalidEntriesCount += 1
                         }
                     }
@@ -124,7 +116,7 @@ class CsvImporterTask(
                     database.endTransaction()
                 }
             } else
-                Log.e(TAG, "Invalid CSV Header: $fieldNames")
+                Log.e(TAG, "Invalid CSV Header: $fields")
 
             if (invalidEntriesCount > 0)
                 Log.e(TAG, "Invalid entries found in CSV files: $invalidEntriesCount")
