@@ -10,6 +10,7 @@ class DatabaseHelper(context: Context)
 
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL(DatabaseContract.CREATE_TABLE_STATEMENT)
+        db?.execSQL(DatabaseContract.CREATE_INDEX_STATEMENT)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersionNumber: Int, newVersionNumber: Int) {

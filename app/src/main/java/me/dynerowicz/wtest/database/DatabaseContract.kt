@@ -9,6 +9,8 @@ object DatabaseContract {
     const val COLUMN_EXTENSION = "extension"
     const val COLUMN_LOCALITY = "locality"
 
+    const val INDEX_POSTAL_CODE = "IDX_POSTAL_CODE"
+
     // Fields as they appear in the CSV to be imported
     const val CSV_NUMBER_OF_FIELDS = 14
     const val CSV_POSTAL_CODE = "cod_postal"
@@ -21,6 +23,9 @@ object DatabaseContract {
             "${DatabaseContract.COLUMN_EXTENSION} INTEGER, " +
             "${DatabaseContract.COLUMN_LOCALITY} TEXT " +
             ")"
+
+    const val CREATE_INDEX_STATEMENT = "CREATE INDEX IF NOT EXISTS ${DatabaseContract.INDEX_POSTAL_CODE} " +
+            "ON ${DatabaseContract.TABLE_NAME}(${DatabaseContract.COLUMN_POSTAL_CODE})"
 
     const val DROP_TABLE_STATEMENT = "DROP TABLE IF EXISTS ${DatabaseContract.TABLE_NAME}"
 
