@@ -9,6 +9,7 @@
     <string name="search">Search query</string>
     <string name="searchHint">Postal code, extension, locality</string>
     <string name="DatabaseInitialization">Database initialization in progress</string>
-    <string name="PleaseWait">Please wait ...</string>
-    <string name="SearchInProgress">Search in progress ...</string>
+    <string name="PleaseWait">Please wait …</string>
+    <string name="SearchInProgress">Search in progress …</string>
+    <string name="searchButton">Search button</string>
 </resources>

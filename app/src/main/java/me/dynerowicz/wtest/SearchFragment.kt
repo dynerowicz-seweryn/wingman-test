@@ -1,20 +1,25 @@
 package me.dynerowicz.wtest
 
 import android.app.ProgressDialog
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.support.v4.app.Fragment
+import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import kotlinx.android.synthetic.main.fragment_search.*
+import me.dynerowicz.wtest.database.DatabaseContract
+import me.dynerowicz.wtest.presenter.PostalCodeRow
+import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
 import me.dynerowicz.wtest.tasks.DatabaseQueryListener
 import me.dynerowicz.wtest.tasks.DatabaseQueryTask
 
 class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
+
+    private var recyclerViewAdapter = PostalCodeRowAdapter()
 
     var database: SQLiteDatabase? = null
     private var searchInProgress: ProgressDialog? = null
@@ -26,6 +31,9 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
     override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         buttonSearch.setOnClickListener(this)
+        fieldSearchResults.setHasFixedSize(true)
+        fieldSearchResults.adapter = recyclerViewAdapter
+        fieldSearchResults.layoutManager = LinearLayoutManager(context)
     }
 
     override fun onClick(p0: View?) {
@@ -45,13 +53,16 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
                     true)
 
             val splitInput = searchInput.split(" ").toTypedArray()
-            DatabaseQueryTask(localDb, this).execute(*splitInput)
+            val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE} = ${splitInput[0]}"
+            DatabaseQueryTask(localDb, this).execute(query)
         }
     }
 
-    override fun onQueryComplete(cursor: Cursor?) {
+    override fun onQueryComplete(postalCodes: List<PostalCodeRow>) {
         searchInProgress?.dismiss()
-        Toast.makeText(context, "Found ${cursor?.count} rows", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Found ${postalCodes.size} matching postal codes entries", Toast.LENGTH_LONG).show()
+        recyclerViewAdapter.items = postalCodes
+        fieldSearchResults.adapter = recyclerViewAdapter
     }
 
     override fun onQueryCancelled() {

@@ -1,18 +1,18 @@
 package me.dynerowicz.wtest.tasks
 
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.util.Log
+import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 class DatabaseQueryTask(
     private val database: SQLiteDatabase,
     private val queryListener: DatabaseQueryListener? = null
-) : AsyncTask<String, Unit, Cursor?>() {
+) : AsyncTask<String, Unit, List<PostalCodeRow>>() {
 
-    override fun onPostExecute(result: Cursor?) {
+    override fun onPostExecute(result: List<PostalCodeRow>) {
         super.onPostExecute(result)
-        Log.v("DatabaseQueryTask", "onPostExecute")
+        Log.v("DatabaseQueryTask", "onPostExecute : ${result.size} rows found")
         queryListener?.onQueryComplete(result)
     }
 
@@ -21,17 +21,25 @@ class DatabaseQueryTask(
         queryListener?.onQueryCancelled()
     }
 
-    override fun doInBackground(vararg queries: String?): Cursor? {
-        var cursor: Cursor? = null
+    override fun doInBackground(vararg queries: String?): List<PostalCodeRow>? {
+        val list = ArrayList<PostalCodeRow>()
 
         if (queries.isNotEmpty()) {
             val query = queries.first()
             query?.let {
-                cursor = database.rawQuery(query, null)
+                val cursor = database.rawQuery(query, null)
+                cursor?.run {
+                    moveToFirst()
+
+                    while (!isAfterLast) {
+                        list.add(PostalCodeRow(getLong(1), getLong(2), getString(3)))
+                        moveToNext()
+                    }
+                }
             }
         }
 
-        return cursor
+        return list
     }
 
     companion object {

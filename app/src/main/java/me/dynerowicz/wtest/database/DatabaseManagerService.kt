@@ -144,7 +144,6 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
     }
 
     inner class DatabaseManagerBinder : Binder() {
-        fun getService(): DatabaseManagerService = this@DatabaseManagerService
         fun getDatabase() = database
     }
 

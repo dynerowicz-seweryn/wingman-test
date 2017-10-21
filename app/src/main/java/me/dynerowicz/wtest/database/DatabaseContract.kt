@@ -9,7 +9,7 @@ object DatabaseContract {
     const val COLUMN_EXTENSION = "extension"
     const val COLUMN_LOCALITY = "locality"
 
-    const val INDEX_POSTAL_CODE = "IDX_POSTAL_CODE"
+    private const val INDEX_POSTAL_CODE = "IDX_POSTAL_CODE"
 
     // Fields as they appear in the CSV to be imported
     const val CSV_NUMBER_OF_FIELDS = 14

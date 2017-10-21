@@ -77,9 +77,7 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         return false
     }
 
-    override fun onServiceDisconnected(p0: ComponentName?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
+    override fun onServiceDisconnected(p0: ComponentName?) = TODO("not implemented")
 
     override fun onServiceConnected(className: ComponentName?, binder: IBinder?) {
         Log.i(TAG, "onServiceConnected")

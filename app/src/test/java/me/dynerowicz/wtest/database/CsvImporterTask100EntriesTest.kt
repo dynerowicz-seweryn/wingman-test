@@ -7,10 +7,10 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.shadows.ShadowApplication
+import org.robolectric.shadows.ShadowLog
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -21,6 +21,8 @@ class CsvImporterTask100EntriesTest {
 
     @Before
     fun setUp() {
+        ShadowLog.stream = System.out
+
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
 

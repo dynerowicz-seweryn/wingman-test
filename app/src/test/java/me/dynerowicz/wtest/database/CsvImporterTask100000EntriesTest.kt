@@ -22,6 +22,8 @@ class CsvImporterTask100000EntriesTest : CsvImportListener {
 
     @Before
     fun setUp() {
+        ShadowLog.stream = System.out
+
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
 
@@ -66,15 +68,7 @@ class CsvImporterTask100000EntriesTest : CsvImportListener {
         cursor.close()
     }
 
-    override fun onImportProgressUpdate(new: Int) {
-        println("Import progress: $new %")
-    }
-
-    override fun onImportComplete(result: Pair<Long, Long>) {
-        println("Import completed")
-    }
-
-    override fun onImportCancelled() {
-        println("Import cancelled")
-    }
+    override fun onImportProgressUpdate(new: Int) = println("Import progress: $new %")
+    override fun onImportComplete(result: Pair<Long, Long>) = println("Import completed")
+    override fun onImportCancelled() = println("Import cancelled")
 }

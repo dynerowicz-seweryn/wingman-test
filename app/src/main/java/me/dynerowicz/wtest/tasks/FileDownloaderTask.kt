@@ -54,7 +54,7 @@ class FileDownloaderTask (
 
         try {
             // Open the connection and proceed with the download only on HTTP 200
-            Log.i(me.dynerowicz.wtest.download.TAG, "Performing HEAD on $this")
+            Log.i(TAG, "Performing HEAD on $this")
             connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "HEAD"
                 setRequestProperty("Accept-Encoding", "identity")
@@ -64,12 +64,12 @@ class FileDownloaderTask (
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 contentAvailable = true
                 contentLength = connection.contentLength.toLong()
-                Log.v(me.dynerowicz.wtest.download.TAG, "Full headers: ${connection.headerFields} ")
-                Log.d(me.dynerowicz.wtest.download.TAG, "Content-Length: $contentLength")
+                Log.v(TAG, "Full headers: ${connection.headerFields} ")
+                Log.d(TAG, "Content-Length: $contentLength")
             } else
-                Log.e(me.dynerowicz.wtest.download.TAG, "Response code: ${connection.responseCode}")
+                Log.e(TAG, "Response code: ${connection.responseCode}")
         } catch (ioe: IOException) {
-            Log.e(me.dynerowicz.wtest.download.TAG, "Connection error: $ioe")
+            Log.e(TAG, "Connection error: $ioe")
         }
 
         return Pair(contentAvailable, contentLength)
@@ -91,7 +91,7 @@ class FileDownloaderTask (
 
             try {
                 // Open the connection and proceed with the download only on HTTP 200
-                Log.d(me.dynerowicz.wtest.download.TAG, "Downloading file at $this")
+                Log.d(TAG, "Downloading file at $this")
                 connection = (url.openConnection() as HttpURLConnection).apply {
                     readTimeout = READING_TIMEOUT
                     connectTimeout = CONNECTION_TIMEOUT
@@ -99,7 +99,7 @@ class FileDownloaderTask (
                 }
 
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    Log.d(me.dynerowicz.wtest.download.TAG, "Downloading using ${connection.headerFields} ")
+                    Log.d(TAG, "Downloading using ${connection.headerFields} ")
 
                     try {
                         inputStream = BufferedInputStream(connection.inputStream)
@@ -122,7 +122,7 @@ class FileDownloaderTask (
                                         totalBytesDownloaded.toInt()
 
                             if (progressUpdate != currentProgress) {
-                                Log.v(me.dynerowicz.wtest.download.TAG, "ProgressUpdate: $totalBytesDownloaded bytes / $contentLength bytes [$progressUpdate%]")
+                                Log.v(TAG, "ProgressUpdate: $totalBytesDownloaded bytes / $contentLength bytes [$progressUpdate%]")
                                 currentProgress = progressUpdate
                                 publishProgress(currentProgress)
                             }
@@ -131,27 +131,27 @@ class FileDownloaderTask (
 
                         downloadCompleted = (totalBytesDownloaded == contentLength)
                     } catch (io: IOException) {
-                        Log.e(me.dynerowicz.wtest.download.TAG, io.toString())
+                        Log.e(TAG, io.toString())
                     } finally {
                         inputStream?.close()
                     }
                 } else
-                    Log.e(me.dynerowicz.wtest.download.TAG, "Request failed with code ${connection.responseCode}")
+                    Log.e(TAG, "Request failed with code ${connection.responseCode}")
             } catch (io: IOException) {
-                Log.e(me.dynerowicz.wtest.download.TAG, io.toString())
+                Log.e(TAG, io.toString())
             } finally {
                 connection?.disconnect()
             }
         } catch (fnfe: FileNotFoundException) {
             // Given the parameters to openFileOutput(), When can this exception occur ?
-            Log.e(me.dynerowicz.wtest.download.TAG, fnfe.toString())
+            Log.e(TAG, fnfe.toString())
         } finally {
             // If the output file was successfully opened, close it and delete the partial content if the download did not succeed
             outputStream?.close()
         }
 
-        Log.i(me.dynerowicz.wtest.download.TAG, "Total bytes downloaded: $totalBytesDownloaded")
-        Log.i(me.dynerowicz.wtest.download.TAG, "Saved to : ${outputFile.name}")
+        Log.i(TAG, "Total bytes downloaded: $totalBytesDownloaded")
+        Log.i(TAG, "Saved to : ${outputFile.name}")
 
         return downloadCompleted
     }

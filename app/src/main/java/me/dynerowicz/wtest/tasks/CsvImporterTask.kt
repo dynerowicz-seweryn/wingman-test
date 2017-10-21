@@ -137,8 +137,8 @@ class CsvImporterTask(
 
     // Database insertion operation
     private val insertStatement = database.compileStatement(DatabaseContract.INSERT_QUERY)
-    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) {
-        with(insertStatement) {
+    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) =
+        insertStatement.run {
             clearBindings()
             bindLong(1, postalCode)
             bindLong(2, extension)
@@ -146,7 +146,6 @@ class CsvImporterTask(
             execute()
             clearBindings()
         }
-    }
 
     companion object {
         const val TAG = "CsvImporterTask"
