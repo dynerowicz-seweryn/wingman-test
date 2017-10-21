@@ -153,8 +153,8 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
         private const val FILENAME = "postalCodes.csv"
         private const val DATABASE_INITIALIZED = "DatabaseInitialized"
 
-        val DB_INITIALIZING = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZING"
-        val DB_INITIALIZED  = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZED"
+        const val DB_INITIALIZING = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZING"
+        const val DB_INITIALIZED  = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZED"
 
         private val DatabaseInitializingBroadcast = Intent(DB_INITIALIZING)
         private val DatabaseInitializedBroadcast  = Intent(DB_INITIALIZED)
