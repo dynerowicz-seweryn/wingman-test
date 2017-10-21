@@ -12,10 +12,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
 import org.robolectric.shadows.ShadowLog
 import java.io.File
 
+@Config(manifest = Config.NONE)
 @RunWith(RobolectricTestRunner::class)
 class DatabaseQueryTask100000EntriesTest : CsvImportListener, DatabaseQueryListener {
     private lateinit var databaseHelper: DatabaseHelper
@@ -59,7 +61,7 @@ class DatabaseQueryTask100000EntriesTest : CsvImportListener, DatabaseQueryListe
         val task = DatabaseQueryTask(database, this)
         task.execute(query)
         ShadowApplication.runBackgroundTasks()
-        val cursor = task.get()
-        Assert.assertTrue(cursor?.count == 1184)
+        val result = task.get()
+        Assert.assertTrue(result.size == 1184)
     }
 }

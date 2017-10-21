@@ -10,10 +10,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
 import org.robolectric.shadows.ShadowLog
 import java.io.File
 
+@Config(manifest = Config.NONE)
 @RunWith(RobolectricTestRunner::class)
 class CsvImporterTaskAllEntriesTest : CsvImportListener {
 
