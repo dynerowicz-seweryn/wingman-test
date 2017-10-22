@@ -2,7 +2,7 @@ package me.dynerowicz.wtest.database
 
 import android.database.sqlite.SQLiteDatabase
 import me.dynerowicz.wtest.tasks.CsvImportListener
-import me.dynerowicz.wtest.tasks.CsvImporterTask
+import me.dynerowicz.wtest.tasks.CsvImportTask
 import me.dynerowicz.wtest.tasks.DatabaseQueryListener
 import me.dynerowicz.wtest.tasks.DatabaseQueryTask
 import org.junit.After
@@ -31,7 +31,7 @@ class DatabaseQueryTask100000EntriesTest : CsvImportListener, DatabaseQueryListe
         database = databaseHelper.writableDatabase
 
         val csvFile = File("app/src/test/resources/codigos_postais-100000.csv")
-        val asyncTask = CsvImporterTask(database, csvFile, this)
+        val asyncTask = CsvImportTask(database, csvFile, importListener = this)
         asyncTask.execute()
         ShadowApplication.runBackgroundTasks()
 

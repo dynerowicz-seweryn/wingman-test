@@ -3,12 +3,13 @@ package me.dynerowicz.wtest.tasks
 import android.util.Log
 
 interface CsvImportListener {
-    fun onImportProgressUpdate(new: Int) {
-        Log.v(TAG, "Import in progress : $new %")
+    fun onImportUpdate(progress: Pair<Int, Long>) {
+        val (id, entryCount) = progress
+        Log.v(TAG, "Import in progress [$id] : $entryCount entries")
     }
 
-    fun onImportComplete(result: Pair<Long, Long>) {
-        val (imported, invalid) = result
+    fun onImportComplete(report: Pair<Long, Long>) {
+        val (imported, invalid) = report
         Log.v(TAG, "Import completed: $imported entries [invalid=$invalid]")
     }
 

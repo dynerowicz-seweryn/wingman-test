@@ -7,28 +7,28 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.database.sqlite.SQLiteDatabase
+import android.os.AsyncTask
 import android.os.Binder
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
 import me.dynerowicz.wtest.R
-import me.dynerowicz.wtest.tasks.CsvImportListener
-import me.dynerowicz.wtest.tasks.CsvImporterTask
-import me.dynerowicz.wtest.tasks.DownloadProgressListener
-import me.dynerowicz.wtest.tasks.FileDownloaderTask
+import me.dynerowicz.wtest.tasks.*
 import java.io.File
 import java.net.URL
 
-class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportListener {
+class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener {
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
 
     private lateinit var managerSettings: SharedPreferences
     private var databaseInitialized = false
-    private lateinit var cachedCsvFile: File
 
-    private var downloader: FileDownloaderTask? = null
-    private var importer: CsvImporterTask? = null
+    private var downloader: CsvDownloadTask? = null
+    private var importers: Array<CsvImportTask>? = null
+    private var importersProgress: LongArray? = null
+    private var importersCompleted: Int = 0
+    private var numberOfExpectedEntries: Long = 0L
 
     // Notification channel
     private val notificationId = 42
@@ -73,7 +73,7 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
     override fun onDestroy() {
         Log.v(TAG, "onDestroy")
         downloader?.cancel(true)
-        importer?.cancel(true)
+        importers?.forEach { it.cancel(true) }
         super.onDestroy()
     }
 
@@ -85,51 +85,70 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
         notificationBuilder.setContentText("Preparing download ...")
         startForeground(notificationId, notificationBuilder.build())
 
-        val csvFile = createTempFile(FILENAME, null, cacheDir)
-        cachedCsvFile = csvFile
-
-        downloader = FileDownloaderTask(URL(getString(R.string.default_csv_url)), csvFile, downloadProgressListener = this)
-        importer = CsvImporterTask(database, cachedCsvFile, importListener = this)
+        downloader = CsvDownloadTask(
+                this,
+                URL(getString(R.string.default_csv_url)),
+                numberOfCsvEntriesFiles = IMPORTERS_COUNT,
+                downloadListener = this
+        )
 
         downloader?.execute()
     }
 
-    override fun onDownloadProgressUpdate(new: Int) {
-        notificationBuilder.setContentText("Download in progress : $new %")
-        notificationBuilder.setProgress(100, new, false)
+    override fun onDownloadUpdate(percentage: Int) {
+        notificationBuilder.setContentText("Download in progress : $percentage %")
+        notificationBuilder.setProgress(100, percentage, false)
         notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
-    override fun onDownloadComplete(success: Boolean) {
-        if (success) {
-            notificationBuilder.setContentText("Preparing CSV import ...")
-            notificationBuilder.setProgress(100, 0, true)
-            notificationManager.notify(notificationId, notificationBuilder.build())
-
-            importer?.execute()
-        }
+    override fun onDownloadFailed() {
+        notificationBuilder.setContentText("Download failed. Try again later.")
+        notificationManager.notify(notificationId, notificationBuilder.build())
     }
 
     override fun onDownloadCancelled() {
         notificationBuilder.setContentText("Download cancelled.")
         notificationManager.notify(notificationId, notificationBuilder.build())
-        cachedCsvFile.delete()
     }
 
-    override fun onImportProgressUpdate(new: Int) {
-        notificationBuilder.setContentText("Importing CSV entries : $new %")
-        notificationBuilder.setProgress(100, new, false)
+    override fun onDownloadComplete(totalNumberOfEntries: Long, headerFile: File, entriesFiles: Array<File>) {
+        notificationBuilder.setContentText("Preparing CSV import ...")
+        notificationBuilder.setProgress(100, 0, true)
         notificationManager.notify(notificationId, notificationBuilder.build())
+
+        Log.i(TAG, "Splitting across ${entriesFiles.size} workers")
+        importers = Array(entriesFiles.size) {
+            CsvImportTask(database, entriesFiles[it], identifier = it, importListener = this)
+        }
+        importersProgress = LongArray(entriesFiles.size)
+        importersCompleted = 0
+        numberOfExpectedEntries = totalNumberOfEntries
+
+        importers?.forEach { it.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) }
     }
 
-    override fun onImportComplete(result: Pair<Long, Long>) {
+    override fun onImportUpdate(progress: Pair<Int, Long>) {
+        Log.v(TAG, "Import progress update $progress")
+        val (identifier, importedEntries) = progress
+
+        val progresses = importersProgress
+        progresses?.let {
+            progresses[identifier] = importedEntries
+
+            val percentage: Int = ((progresses.sum() * 100L) / numberOfExpectedEntries).toInt()
+            notificationBuilder.setContentText("Importing CSV entries : $percentage %")
+            notificationBuilder.setProgress(100, percentage, false)
+            notificationManager.notify(notificationId, notificationBuilder.build())
+        }
+    }
+
+    override fun onImportComplete(report: Pair<Long, Long>) {
         notificationBuilder.setContentText("Import complete.")
         notificationBuilder.setProgress(100, 100, false)
         notificationManager.notify(notificationId, notificationBuilder.build())
 
         managerSettings.edit().putBoolean(DATABASE_INITIALIZED, true).apply()
 
-        cachedCsvFile.delete()
         stopForeground(true)
         database.close()
         database = databaseHelper.readableDatabase
@@ -140,7 +159,6 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
     override fun onImportCancelled() {
         notificationBuilder.setContentText("Import cancelled.")
         notificationManager.notify(notificationId, notificationBuilder.build())
-        cachedCsvFile.delete()
     }
 
     inner class DatabaseManagerBinder : Binder() {
@@ -149,7 +167,8 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
 
     companion object {
         private const val TAG = "DatabaseManagerService"
-        private const val FILENAME = "postalCodes.csv"
+        private val IMPORTERS_COUNT = maxOf(Runtime.getRuntime().availableProcessors() - 2, 1)
+
         private const val DATABASE_INITIALIZED = "DatabaseInitialized"
 
         const val DB_INITIALIZING = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZING"
