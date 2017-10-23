@@ -25,6 +25,7 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
 
     private lateinit var managerSettings: SharedPreferences
     private var databaseInitialized = false
+    private var initializationInProgress = false
     private lateinit var cachedCsvFile: File
 
     private var downloader: CsvDownloadTask? = null
@@ -58,9 +59,12 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
         super.onStartCommand(intent, flags, startId)
 
         Log.v(TAG, "onStartCommand")
-        if(!databaseInitialized)
-            initializeDatabase()
-        else {
+        if(!databaseInitialized) {
+            if (!initializationInProgress) {
+                initializationInProgress = true
+                initializeDatabase()
+            }
+        } else {
             database = databaseHelper.readableDatabase
             sendBroadcast(DatabaseInitializedBroadcast)
         }

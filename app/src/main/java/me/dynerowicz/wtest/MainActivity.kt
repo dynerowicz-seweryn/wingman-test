@@ -30,15 +30,6 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
 
     private var currentFragment: Fragment = search
 
-    override fun onStart() {
-        super.onStart()
-
-        registerReceiver(dbManagerReceiver, dbManagerIntentFilter)
-
-        dbManagerIntent = Intent(this, DatabaseManagerService::class.java)
-        bindService(dbManagerIntent, this, Context.BIND_AUTO_CREATE)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -46,14 +37,26 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         bottomNavigation.setOnNavigationItemSelectedListener(this)
 
         supportFragmentManager.beginTransaction()
-            .replace(R.id.fragmentContainer, currentFragment)
-            .commit()
+                .replace(R.id.fragmentContainer, currentFragment)
+                .commit()
+
+        dbManagerIntent = Intent(this, DatabaseManagerService::class.java)
+        bindService(dbManagerIntent, this, Context.BIND_AUTO_CREATE)
     }
 
-    override fun onStop() {
+    override fun onResume() {
+        super.onResume()
+        registerReceiver(dbManagerReceiver, dbManagerIntentFilter)
+    }
+
+    override fun onPause() {
         unregisterReceiver(dbManagerReceiver)
+        super.onPause()
+    }
+
+    override fun onDestroy() {
         unbindService(this)
-        super.onStop()
+        super.onDestroy()
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
@@ -91,14 +94,16 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
             when (action) {
-                DatabaseManagerService.DB_INITIALIZING ->
+                DatabaseManagerService.DB_INITIALIZING -> {
+                    Log.v(TAG, "DatabaseManagerService : Initialization in progress")
                     initializationInProgress = ProgressDialog.show(
-                                        context,
-                                        context?.getString(R.string.DatabaseInitialization),
-                                        context?.getString(R.string.PleaseWait),
-                                        true)
-
+                        context,
+                        context?.getString(R.string.DatabaseInitialization),
+                        context?.getString(R.string.PleaseWait),
+                        true)
+                }
                 DatabaseManagerService.DB_INITIALIZED -> {
+                    Log.v(TAG, "DatabaseManagerService : Initialization complete")
                     initializationInProgress?.dismiss()
                     search.database = dbManagerBinder?.getDatabase()
                 }
