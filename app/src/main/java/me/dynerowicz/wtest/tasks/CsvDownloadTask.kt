@@ -7,15 +7,15 @@ import java.net.URL
 import java.io.*
 import java.net.HttpURLConnection
 
-class FileDownloaderTask (
+class CsvDownloadTask(
         private val url: URL,
         private val outputFile: File,
-        private val downloadProgressListener: DownloadProgressListener? = null
+        private val downloadListener: CsvDownloadListener? = null
 ) : AsyncTask<Unit, Int, Boolean>() {
 
     override fun onPostExecute(downloadCompleted: Boolean) {
         super.onPostExecute(downloadCompleted)
-        downloadProgressListener?.onDownloadComplete(downloadCompleted)
+        downloadListener?.onDownloadComplete(downloadCompleted)
     }
 
     override fun onProgressUpdate(vararg values: Int?) {
@@ -23,12 +23,12 @@ class FileDownloaderTask (
         if(values.isNotEmpty()) {
             val progressUpdate = values.first()
             if(progressUpdate != null)
-                downloadProgressListener?.onDownloadProgressUpdate(progressUpdate)
+                downloadListener?.onDownloadUpdate(progressUpdate)
         }
     }
 
     override fun onCancelled() {
-        downloadProgressListener?.onDownloadCancelled()
+        downloadListener?.onDownloadCancelled()
     }
 
     override fun doInBackground(vararg p0: Unit?): Boolean {
@@ -157,7 +157,7 @@ class FileDownloaderTask (
     }
 
     companion object {
-        const val TAG: String = "FileDownloaderTask"
+        const val TAG: String = "CsvDownloadTask"
         const val CONNECTION_TIMEOUT = 3000
         const val READING_TIMEOUT = 3000
         const val BUFFER_SIZE = 64 * 1024

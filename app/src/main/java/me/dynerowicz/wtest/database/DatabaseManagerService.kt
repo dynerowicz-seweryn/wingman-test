@@ -14,12 +14,12 @@ import android.util.Log
 import me.dynerowicz.wtest.R
 import me.dynerowicz.wtest.tasks.CsvImportListener
 import me.dynerowicz.wtest.tasks.CsvImporterTask
-import me.dynerowicz.wtest.tasks.DownloadProgressListener
-import me.dynerowicz.wtest.tasks.FileDownloaderTask
+import me.dynerowicz.wtest.tasks.CsvDownloadListener
+import me.dynerowicz.wtest.tasks.CsvDownloadTask
 import java.io.File
 import java.net.URL
 
-class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportListener {
+class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener {
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
 
@@ -27,7 +27,7 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
     private var databaseInitialized = false
     private lateinit var cachedCsvFile: File
 
-    private var downloader: FileDownloaderTask? = null
+    private var downloader: CsvDownloadTask? = null
     private var importer: CsvImporterTask? = null
 
     // Notification channel
@@ -88,13 +88,13 @@ class DatabaseManagerService : Service(), DownloadProgressListener, CsvImportLis
         val csvFile = createTempFile(FILENAME, null, cacheDir)
         cachedCsvFile = csvFile
 
-        downloader = FileDownloaderTask(URL(getString(R.string.default_csv_url)), csvFile, downloadProgressListener = this)
+        downloader = CsvDownloadTask(URL(getString(R.string.default_csv_url)), csvFile, downloadListener = this)
         importer = CsvImporterTask(database, cachedCsvFile, importListener = this)
 
         downloader?.execute()
     }
 
-    override fun onDownloadProgressUpdate(new: Int) {
+    override fun onDownloadUpdate(new: Int) {
         notificationBuilder.setContentText("Download in progress : $new %")
         notificationBuilder.setProgress(100, new, false)
         notificationManager.notify(notificationId, notificationBuilder.build())

@@ -2,8 +2,8 @@ package me.dynerowicz.wtest.tasks
 
 import android.util.Log
 
-interface DownloadProgressListener {
-    fun onDownloadProgressUpdate(new: Int) {
+interface CsvDownloadListener {
+    fun onDownloadUpdate(new: Int) {
         Log.v(TAG, "Download in progress : $new %")
     }
 
