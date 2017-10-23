@@ -1,11 +1,11 @@
 package me.dynerowicz.wtest.tasks
 
+import android.database.Cursor
 import android.util.Log
-import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 interface DatabaseQueryListener {
-    fun onQueryComplete(postalCodes: List<PostalCodeRow>) {
-        Log.i(TAG, "Query complete, found ${postalCodes.size} rows in database")
+    fun onQueryComplete(results: Cursor) {
+        Log.i(TAG, "Query complete, found ${results.count} rows in database")
     }
 
     fun onQueryCancelled() {

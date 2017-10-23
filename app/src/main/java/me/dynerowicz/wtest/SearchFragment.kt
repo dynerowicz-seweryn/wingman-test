@@ -1,6 +1,7 @@
 package me.dynerowicz.wtest
 
 import android.app.ProgressDialog
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.support.v4.app.Fragment
@@ -11,8 +12,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import kotlinx.android.synthetic.main.fragment_search.*
-import me.dynerowicz.wtest.database.DatabaseContract
-import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
 import me.dynerowicz.wtest.tasks.DatabaseQueryListener
 import me.dynerowicz.wtest.tasks.DatabaseQueryTask
@@ -55,14 +54,17 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
             val splitInput = searchInput.split(" ").toTypedArray()
 
             //TODO: prevent SQL injection
+            recyclerViewAdapter.postalCodeRowsCursor?.close()
             DatabaseQueryTask(localDb, this).execute(*splitInput)
         }
     }
 
-    override fun onQueryComplete(postalCodes: List<PostalCodeRow>) {
+    override fun onQueryComplete(results: Cursor) {
         searchInProgress?.dismiss()
-        Toast.makeText(context, "Found ${postalCodes.size} matching postal codes entries", Toast.LENGTH_LONG).show()
-        recyclerViewAdapter.items = postalCodes
+        Log.v(TAG, "onQueryComplete")
+        Log.v(TAG, "Found ${results.count} matching postal codes entries")
+        Toast.makeText(context, "Found ${results.count} matching postal codes entries", Toast.LENGTH_LONG).show()
+        recyclerViewAdapter.postalCodeRowsCursor = results
         fieldSearchResults.adapter = recyclerViewAdapter
     }
 

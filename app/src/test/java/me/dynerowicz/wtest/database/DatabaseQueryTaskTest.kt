@@ -2,10 +2,7 @@ package me.dynerowicz.wtest.database
 
 import android.database.sqlite.SQLiteDatabase
 import me.dynerowicz.wtest.presenter.PostalCodeRow
-import me.dynerowicz.wtest.tasks.CsvImportListener
-import me.dynerowicz.wtest.tasks.CsvImporterTask
-import me.dynerowicz.wtest.tasks.DatabaseQueryListener
-import me.dynerowicz.wtest.tasks.DatabaseQueryTask
+import me.dynerowicz.wtest.tasks.*
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -57,12 +54,14 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
         task.execute(*inputs)
         ShadowApplication.runBackgroundTasks()
 
-        Assert.assertTrue (task.get().any {
-            if (it == desiredRow) {
-                println("$it == $desiredRow")
-                true
-            } else false
-        })
+        val cursor = task.get()
+        var desiredRowFound = false
+
+        cursor.moveToFirst()
+        while(!cursor.isAfterLast && !desiredRowFound)
+            desiredRowFound = (desiredRow == cursor.getPostalCodeRow())
+
+        Assert.assertTrue ( desiredRowFound )
     }
 
     @Test

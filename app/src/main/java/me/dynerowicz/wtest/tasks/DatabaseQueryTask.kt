@@ -1,5 +1,6 @@
 package me.dynerowicz.wtest.tasks
 
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.util.Log
@@ -10,11 +11,11 @@ import me.dynerowicz.wtest.database.QueryBuilder
 class DatabaseQueryTask(
     private val database: SQLiteDatabase,
     private val queryListener: DatabaseQueryListener? = null
-) : AsyncTask<String, Unit, List<PostalCodeRow>>() {
+) : AsyncTask<String, Unit, Cursor>() {
 
-    override fun onPostExecute(result: List<PostalCodeRow>) {
+    override fun onPostExecute(result: Cursor) {
         super.onPostExecute(result)
-        Log.v("DatabaseQueryTask", "onPostExecute : ${result.size} rows found")
+        Log.v("DatabaseQueryTask", "onPostExecute : ${result.count} rows found")
         queryListener?.onQueryComplete(result)
     }
 
@@ -24,13 +25,7 @@ class DatabaseQueryTask(
     }
 
     private fun constructQuery(inputs: Array<out String?>): String {
-        val queryBuilder = QueryBuilder().apply {
-            select = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE,
-                             DatabaseContract.COLUMN_EXTENSION,
-                             DatabaseContract.COLUMN_LOCALITY)
-            fromTable = DatabaseContract.TABLE_NAME
-            orderBy = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE, DatabaseContract.COLUMN_EXTENSION)
-        }
+        val queryBuilder = getBaseQuery()
 
         var postalCodeFound = false
         var extensionFound = false
@@ -66,27 +61,21 @@ class DatabaseQueryTask(
         return queryBuilder.build()
     }
 
-    override fun doInBackground(vararg inputs: String?): List<PostalCodeRow>? {
-        val list = ArrayList<PostalCodeRow>()
-
-        val query = constructQuery(inputs)
-        Log.v(TAG, "Query : $query")
-
-        val cursor = database.rawQuery(query, null)
-        cursor?.run {
-            moveToFirst()
-
-            while (!isAfterLast) {
-                list.add(PostalCodeRow(getLong(0), getLong(1), getString(2)))
-                moveToNext()
-            }
-        }
-        cursor.close()
-
-        return list
+    override fun doInBackground(vararg inputs: String?): Cursor {
+        return database.rawQuery(constructQuery(inputs), null)
     }
 
     companion object {
         const val TAG = "DatabaseQueryTask"
+
+        fun getBaseQuery() = QueryBuilder().apply {
+            select = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE,
+                             DatabaseContract.COLUMN_EXTENSION,
+                             DatabaseContract.COLUMN_LOCALITY)
+            fromTable = DatabaseContract.TABLE_NAME
+            orderBy = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE, DatabaseContract.COLUMN_EXTENSION)
+        }
     }
 }
+
+fun Cursor.getPostalCodeRow() : PostalCodeRow = PostalCodeRow(getLong(0), getLong(1), getString(2))
