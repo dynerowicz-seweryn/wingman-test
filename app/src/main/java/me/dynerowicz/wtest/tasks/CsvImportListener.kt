@@ -9,11 +9,11 @@ interface CsvImportListener {
 
     fun onImportComplete(result: Pair<Long, Long>) {
         val (imported, invalid) = result
-        Log.v(TAG, "Import completed: $imported entries [invalid=$invalid]")
+        Log.i(TAG, "Import completed: $imported entries [invalid=$invalid]")
     }
 
     fun onImportCancelled() {
-        Log.v(TAG, "Import cancelled")
+        Log.i(TAG, "Import cancelled")
     }
 
     companion object {

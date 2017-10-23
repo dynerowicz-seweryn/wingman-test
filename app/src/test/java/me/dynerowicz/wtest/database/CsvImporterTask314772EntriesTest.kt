@@ -3,8 +3,6 @@ package me.dynerowicz.wtest.database
 import android.database.sqlite.SQLiteDatabase
 import me.dynerowicz.wtest.tasks.CsvImportListener
 import me.dynerowicz.wtest.tasks.CsvImporterTask
-import me.dynerowicz.wtest.tasks.DatabaseQueryListener
-import me.dynerowicz.wtest.tasks.DatabaseQueryTask
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -19,25 +17,25 @@ import java.io.File
 
 @Config(manifest = Config.NONE)
 @RunWith(RobolectricTestRunner::class)
-class DatabaseQueryTask100000EntriesTest : CsvImportListener, DatabaseQueryListener {
+class CsvImporterTask314772EntriesTest : CsvImportListener {
+
     private lateinit var databaseHelper: DatabaseHelper
     lateinit var database: SQLiteDatabase
 
     @Before
     fun setUp() {
         ShadowLog.stream = System.out
-
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
 
-        val csvFile = File("app/src/test/resources/codigos_postais-100000.csv")
+        val csvFile = File("app/src/test/resources/codigos_postais-314772.csv")
         val asyncTask = CsvImporterTask(database, csvFile, this)
         asyncTask.execute()
         ShadowApplication.runBackgroundTasks()
 
         val (importedEntries, invalidEntries) = asyncTask.get()
 
-        Assert.assertTrue(importedEntries == 100000L)
+        Assert.assertTrue(importedEntries == 314772L)
         Assert.assertTrue(invalidEntries == 0L)
     }
 
@@ -48,20 +46,10 @@ class DatabaseQueryTask100000EntriesTest : CsvImportListener, DatabaseQueryListe
     }
 
     @Test
-    fun databaseContains100000Rows() {
+    fun testHas314772EntriesInDatabase() {
         val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME}"
         val cursor = database.rawQuery(query, null)
-        Assert.assertTrue(cursor.count == 100000)
+        Assert.assertTrue(cursor.count == 314772)
         cursor.close()
-    }
-
-    @Test
-    fun databaseContains1184RowsWithPostalCode3750() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE} = 3750"
-        val task = DatabaseQueryTask(database, this)
-        task.execute(query)
-        ShadowApplication.runBackgroundTasks()
-        val result = task.get()
-        Assert.assertTrue(result.size == 1184)
     }
 }

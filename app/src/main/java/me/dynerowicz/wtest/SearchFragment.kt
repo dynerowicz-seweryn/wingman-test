@@ -54,11 +54,8 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
 
             val splitInput = searchInput.split(" ").toTypedArray()
 
-            //TODO: parsing logic from search terms to SQL query
-            val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE} = ${splitInput[0]}"
-
             //TODO: prevent SQL injection
-            DatabaseQueryTask(localDb, this).execute(query)
+            DatabaseQueryTask(localDb, this).execute(*splitInput)
         }
     }
 

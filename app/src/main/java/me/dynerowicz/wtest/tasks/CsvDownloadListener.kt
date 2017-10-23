@@ -8,11 +8,11 @@ interface CsvDownloadListener {
     }
 
     fun onDownloadComplete(success: Boolean) {
-        Log.v(TAG, "Download completed successfully : $success")
+        Log.i(TAG, "Download completed successfully : $success")
     }
 
     fun onDownloadCancelled() {
-        Log.v(TAG, "Download cancelled")
+        Log.i(TAG, "Download cancelled")
     }
 
     companion object {
