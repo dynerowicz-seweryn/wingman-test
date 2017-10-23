@@ -5,8 +5,10 @@ import android.os.AsyncTask
 import android.util.Log
 import me.dynerowicz.wtest.database.DatabaseContract
 import me.dynerowicz.wtest.utils.parseCsvLine
+import org.apache.commons.lang3.StringUtils
 import java.io.File
 import java.io.IOException
+import java.text.Normalizer
 
 class CsvImporterTask(
         private val database: SQLiteDatabase,
@@ -135,7 +137,8 @@ class CsvImporterTask(
             bindLong(1, postalCode)
             bindLong(2, extension)
             bindString(3, locality)
-            execute()
+            //bindString(4, StringUtils.stripAccents(locality))
+            executeInsert()
             clearBindings()
         }
 
