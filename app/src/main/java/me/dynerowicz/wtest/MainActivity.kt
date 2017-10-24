@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
                 DatabaseManagerService.DB_INITIALIZED -> {
                     Log.v(TAG, "DatabaseManagerService : Initialization complete")
                     initializationInProgress?.dismiss()
-                    search.database = dbManagerBinder?.getDatabase()
+                    search.dbHelper = dbManagerBinder?.getDatabaseHelper()
                 }
             }
         }

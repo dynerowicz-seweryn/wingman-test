@@ -2,6 +2,7 @@ package me.dynerowicz.wtest.tasks
 
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import android.os.AsyncTask
 import android.util.Log
 import me.dynerowicz.wtest.database.DatabaseContract
@@ -9,7 +10,7 @@ import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.database.QueryBuilder
 
 class DatabaseQueryTask(
-    private val database: SQLiteDatabase,
+    private val dbHelper: SQLiteOpenHelper,
     private val queryListener: DatabaseQueryListener? = null
 ) : AsyncTask<String, Unit, Cursor>() {
 
@@ -62,7 +63,10 @@ class DatabaseQueryTask(
     }
 
     override fun doInBackground(vararg inputs: String?): Cursor {
-        return database.rawQuery(constructQuery(inputs), null)
+        val database = dbHelper.readableDatabase
+        val query = constructQuery(inputs)
+        Log.v(TAG, "Executing query : $query")
+        return database.rawQuery(query, null)
     }
 
     companion object {

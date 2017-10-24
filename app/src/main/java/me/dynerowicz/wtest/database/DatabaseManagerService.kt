@@ -148,7 +148,7 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
     }
 
     inner class DatabaseManagerBinder : Binder() {
-        fun getDatabase() = database
+        fun getDatabaseHelper() = databaseHelper
     }
 
     companion object {

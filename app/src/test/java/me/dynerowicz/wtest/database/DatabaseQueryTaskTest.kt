@@ -50,7 +50,7 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
 
     private fun databaseContainsDesiredRowFor(vararg inputs: String?) {
         val desiredRow = PostalCodeRow(2695, 650, "São João da Talha")
-        val task = DatabaseQueryTask(database, this)
+        val task = DatabaseQueryTask(databaseHelper, this)
         task.execute(*inputs)
         ShadowApplication.runBackgroundTasks()
 

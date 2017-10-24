@@ -3,6 +3,7 @@ package me.dynerowicz.wtest
 import android.app.ProgressDialog
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
@@ -20,7 +21,7 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
 
     private var recyclerViewAdapter = PostalCodeRowAdapter()
 
-    var database: SQLiteDatabase? = null
+    var dbHelper: SQLiteOpenHelper? = null
     private var searchInProgress: ProgressDialog? = null
 
     override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
@@ -43,8 +44,8 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
     }
 
     private fun performSearch(searchInput: String) {
-        val localDb = database
-        localDb?.let {
+        val localDbHelper = dbHelper
+        localDbHelper?.let {
             searchInProgress = ProgressDialog.show(
                     context,
                     context?.getString(R.string.SearchInProgress),
@@ -55,7 +56,7 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
 
             //TODO: prevent SQL injection
             recyclerViewAdapter.postalCodeRowsCursor?.close()
-            DatabaseQueryTask(localDb, this).execute(*splitInput)
+            DatabaseQueryTask(localDbHelper, this).execute(*splitInput)
         }
     }
 
