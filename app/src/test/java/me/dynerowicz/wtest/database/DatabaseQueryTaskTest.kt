@@ -1,5 +1,6 @@
 package me.dynerowicz.wtest.database
 
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.tasks.*
@@ -47,6 +48,8 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
         database.close()
         databaseHelper.close()
     }
+
+    private fun Cursor.getPostalCodeRow() : PostalCodeRow = PostalCodeRow(getLong(0), getString(1))
 
     private fun databaseContainsDesiredRowFor(vararg inputs: String) {
         val desiredRow = PostalCodeRow(2695, 650, "São João da Talha")

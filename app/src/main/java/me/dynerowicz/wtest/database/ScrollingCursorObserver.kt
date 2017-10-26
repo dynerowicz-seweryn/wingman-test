@@ -1,6 +1,6 @@
 package me.dynerowicz.wtest.database
 
 interface ScrollingCursorObserver {
-    fun onMoreResultsAvailable(count: Int)
+    fun onMoreResultsAvailable(positionStart: Int, rowCount: Int)
     fun onEndOfResults()
 }

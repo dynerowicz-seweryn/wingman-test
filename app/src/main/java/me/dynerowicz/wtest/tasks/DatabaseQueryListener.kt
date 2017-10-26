@@ -5,7 +5,7 @@ import android.util.Log
 
 interface DatabaseQueryListener {
     fun onQueryComplete(results: Cursor) {
-        Log.i(TAG, "Query complete, found ${results.count} rows in database")
+        Log.i(TAG, "Query complete, found ${results.count} rowScroller in database")
     }
 
     fun onQueryCancelled() {

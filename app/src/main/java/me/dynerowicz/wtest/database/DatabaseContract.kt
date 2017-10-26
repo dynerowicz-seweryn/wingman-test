@@ -1,6 +1,8 @@
 package me.dynerowicz.wtest.database
 
+import android.database.Cursor
 import android.provider.BaseColumns
+import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 // TODO: figure out how to handle properly the encoding used throughout the database ...
 /** Contract describing the table used to encode the postal codes. */

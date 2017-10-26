@@ -37,6 +37,8 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
 
+        scroller = ScrollingCursor(database, this)
+
         val csvFile = File("app/src/test/resources/codigos_postais-$ENTRY_COUNT.csv")
         val asyncTask = CsvImporterTask(database, csvFile, this)
         asyncTask.execute()
@@ -54,7 +56,7 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
         databaseHelper.close()
     }
 
-    override fun onMoreResultsAvailable(count: Int) {
+    override fun onMoreResultsAvailable(positionStart: Int, rowCount: Int) {
         while (currentRow < scroller.count()) {
             if (desiredRow == scroller.getPostalCodeRow(currentRow))
                 desiredRowFound = true
@@ -65,10 +67,10 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
     override fun onEndOfResults() {
         Assert.assertTrue(desiredRowFound)
     }
-    
+
     private fun databaseContainsDesiredRowFor(vararg inputs: String) {
-        scroller = ScrollingCursor(database, this, inputs = *inputs)
-        scroller.initialize()
+        scroller.inputs = inputs
+        scroller.start()
     }
 
     @Test

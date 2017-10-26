@@ -9,7 +9,8 @@ import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 class DatabaseQueryTask(
     private val database: SQLiteDatabase,
-    private val queryListener: DatabaseQueryListener? = null
+    private val queryListener: DatabaseQueryListener? = null,
+    private val appendTo: MutableList<PostalCodeRow>? = null
 ) : AsyncTask<QueryBuilder, Unit, Cursor>() {
 
     override fun doInBackground(vararg queries: QueryBuilder): Cursor {
@@ -19,12 +20,17 @@ class DatabaseQueryTask(
         val query = queries.first().toString()
         Log.v(TAG, "Query: $query")
 
-        return database.rawQuery(query, null)
+        val cursor = database.rawQuery(query, null)
+
+        while(cursor.moveToNext())
+            appendTo?.add(cursor.getPostalCodeRow())
+
+        return cursor
     }
 
     override fun onPostExecute(results: Cursor) {
         super.onPostExecute(results)
-        Log.v("DatabaseQueryTask", "onPostExecute : ${results.count} rows found")
+        Log.v("DatabaseQueryTask", "onPostExecute : ${results.count} rowScroller found")
         queryListener?.onQueryComplete(results)
     }
 
@@ -33,9 +39,9 @@ class DatabaseQueryTask(
         queryListener?.onQueryCancelled()
     }
 
+    private fun Cursor.getPostalCodeRow() : PostalCodeRow = PostalCodeRow(getLong(0), getString(1))
+
     companion object {
         const val TAG = "DatabaseQueryTask"
     }
 }
-
-fun Cursor.getPostalCodeRow() : PostalCodeRow = PostalCodeRow(getLong(0), getString(1))
