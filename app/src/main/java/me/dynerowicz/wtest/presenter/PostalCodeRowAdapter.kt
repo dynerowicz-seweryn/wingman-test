@@ -1,15 +1,15 @@
 package me.dynerowicz.wtest.presenter
 
-import android.database.Cursor
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import me.dynerowicz.wtest.database.ScrollingCursor
 import me.dynerowicz.wtest.databinding.ItemPostalCodeRowBinding
-import me.dynerowicz.wtest.tasks.getPostalCodeRow
 
 class PostalCodeRowAdapter : RecyclerView.Adapter<PostalCodeRowAdapter.PostalCodeRowHolder>() {
-    var postalCodeRowsCursor: List<PostalCodeRow>? = null
+    var postalCodeRows: List<PostalCodeRow>? = null
+    var postalCodeRowResults: ScrollingCursor? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostalCodeRowHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -18,7 +18,7 @@ class PostalCodeRowAdapter : RecyclerView.Adapter<PostalCodeRowAdapter.PostalCod
     }
 
     override fun onBindViewHolder(holder: PostalCodeRowHolder, position: Int) {
-        val localList = postalCodeRowsCursor
+        val localList = postalCodeRows
 
         localList?.let {
             val postalCodeRow = localList[position]
@@ -28,7 +28,7 @@ class PostalCodeRowAdapter : RecyclerView.Adapter<PostalCodeRowAdapter.PostalCod
         }
     }
 
-    override fun getItemCount(): Int = postalCodeRowsCursor?.size ?: 0
+    override fun getItemCount(): Int = postalCodeRows?.size ?: 0
 
     inner class PostalCodeRowHolder(val fields: ItemPostalCodeRowBinding) : RecyclerView.ViewHolder(fields.root)
 

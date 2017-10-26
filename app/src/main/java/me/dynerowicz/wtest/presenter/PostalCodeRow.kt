@@ -4,6 +4,8 @@ data class PostalCodeRow(val postalCode: Long, val extension: Long, val locality
     constructor(postalCodeWithExtension: Long, locality: String)
         : this(postalCodeWithExtension / 1000L, postalCodeWithExtension % 1000L, locality)
 
+    val postalCodeWithExtension: Long = Companion.postalCodeWithExtension(postalCode, extension)
+
     companion object {
         fun postalCodeWithExtension(postalCode: Long, extension: Long): Long {
             if (postalCode < 0 || 9999L < postalCode)

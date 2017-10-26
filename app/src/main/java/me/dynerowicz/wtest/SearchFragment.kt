@@ -3,7 +3,6 @@ package me.dynerowicz.wtest
 import android.app.ProgressDialog
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
@@ -16,13 +15,13 @@ import kotlinx.android.synthetic.main.fragment_search.*
 import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
 import me.dynerowicz.wtest.tasks.DatabaseQueryListener
-import me.dynerowicz.wtest.tasks.DatabaseQueryTask
+import me.dynerowicz.wtest.tasks.getPostalCodeRow
 
 class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
 
     private var recyclerViewAdapter = PostalCodeRowAdapter()
 
-    var dbHelper: SQLiteOpenHelper? = null
+    var database: SQLiteDatabase? = null
     private var searchInProgress: ProgressDialog? = null
 
     override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
@@ -46,8 +45,8 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
     }
 
     private fun performSearch(searchInput: String) {
-        val localDbHelper = dbHelper
-        localDbHelper?.let {
+        val localDatabase = database
+        localDatabase?.let {
             searchInProgress = ProgressDialog.show(
                     context,
                     context?.getString(R.string.SearchInProgress),
@@ -57,16 +56,21 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
             val splitInput = searchInput.split(" ").toTypedArray()
 
             //TODO: prevent SQL injection
-            DatabaseQueryTask(localDbHelper, this).execute(*splitInput)
+            //DatabaseQueryTask(localDatabase, this).execute(*splitInput)
         }
     }
 
-    override fun onQueryComplete(results: List<PostalCodeRow>) {
+    override fun onQueryComplete(results: Cursor) {
         searchInProgress?.dismiss()
         Log.v(TAG, "onQueryComplete")
-        Log.v(TAG, "Found ${results.size} matching postal codes entries")
-        Toast.makeText(context, "Found ${results.size} matching postal codes entries", Toast.LENGTH_LONG).show()
-        recyclerViewAdapter.postalCodeRowsCursor = results
+        Log.v(TAG, "Found ${results.count} matching postal codes entries")
+        Toast.makeText(context, "Found ${results.count} matching postal codes entries", Toast.LENGTH_LONG).show()
+        val rows: MutableList<PostalCodeRow> = ArrayList()
+        for (row in 0 until results.count) {
+            results.moveToPosition(row)
+            rows.add(results.getPostalCodeRow())
+        }
+        recyclerViewAdapter.postalCodeRows = rows
         recyclerViewAdapter.notifyDataSetChanged()
     }
 

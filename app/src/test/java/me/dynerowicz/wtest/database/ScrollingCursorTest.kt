@@ -17,7 +17,7 @@ import java.io.File
 
 @Config(manifest = Config.NONE)
 @RunWith(RobolectricTestRunner::class)
-class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
+class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingCursorObserver {
     companion object {
         const val ENTRY_COUNT = 314772L
     }
@@ -25,7 +25,13 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
     private lateinit var databaseHelper: DatabaseHelper
     lateinit var database: SQLiteDatabase
 
-    @Before fun setUp() {
+    lateinit var scroller: ScrollingCursor
+    var currentRow = 0
+    var desiredRow = PostalCodeRow(2695, 650, "São João da Talha")
+    var desiredRowFound = false
+
+    @Before
+    fun setUp() {
         ShadowLog.stream = System.out
 
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
@@ -48,59 +54,48 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
         databaseHelper.close()
     }
 
-    private fun databaseContainsDesiredRowFor(vararg inputs: String) {
-        val desiredRow = PostalCodeRow(2695, 650, "São João da Talha")
-        val task = DatabaseQueryTask(database, this)
-
-        val queryBuilder = QueryBuilder(
-            select = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION, DatabaseContract.COLUMN_LOCALITY),
-            fromTable = DatabaseContract.TABLE_NAME,
-            orderBy = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION),
-            limitTo = 5000,
-            inputs = *inputs
-        )
-
-        task.execute(queryBuilder)
-        ShadowApplication.runBackgroundTasks()
-
-        val results = task.get()
-
-        var resultContainsDesiredRow = false
-        if (results.moveToFirst()) {
-            while (results.moveToNext() && !resultContainsDesiredRow) {
-                if (desiredRow == results.getPostalCodeRow())
-                    resultContainsDesiredRow = true
-            }
+    override fun onMoreResultsAvailable(count: Int) {
+        while (currentRow < scroller.count()) {
+            if (desiredRow == scroller.getPostalCodeRow(currentRow))
+                desiredRowFound = true
+            currentRow += 1
         }
+    }
 
-        Assert.assertTrue ( resultContainsDesiredRow )
+    override fun onEndOfResults() {
+        Assert.assertTrue(desiredRowFound)
+    }
+    
+    private fun databaseContainsDesiredRowFor(vararg inputs: String) {
+        scroller = ScrollingCursor(database, this, inputs = *inputs)
+        scroller.initialize()
     }
 
     @Test
     fun databaseContainsDesiredRowForPostalCode2695() =
-            databaseContainsDesiredRowFor("2695")
+        databaseContainsDesiredRowFor("2695")
 
     @Test
     fun databaseContainsDesiredRowForPostalCode2695Extension650() =
-            databaseContainsDesiredRowFor("2695", "650")
+        databaseContainsDesiredRowFor("2695", "650")
 
     @Test
     fun databaseContainsDesiredRowForKeywordsSaoAndJoao() =
-            databaseContainsDesiredRowFor("São", "João")
+        databaseContainsDesiredRowFor("São", "João")
 
     @Test
     fun databaseContainsDesiredRowForKeywords_sAo_joA_da_Talha() =
-            databaseContainsDesiredRowFor("sAo", "joA", "da", "TaLH")
+        databaseContainsDesiredRowFor("sAo", "joA", "da", "TaLH")
 
     @Test
     fun databaseContainsDesiredRowForKeywords_sao_talha() =
-            databaseContainsDesiredRowFor("sao", "talha")
+        databaseContainsDesiredRowFor("sao", "talha")
 
     @Test
     fun databaseContainsDesiredRowForKeywords_talh_joa() =
-            databaseContainsDesiredRowFor("talh", "joa")
+        databaseContainsDesiredRowFor("talh", "joa")
 
     @Test
     fun databaseContainsDesiredRowForKeywords_joao_talha() =
-            databaseContainsDesiredRowFor("joao", "talha")
+        databaseContainsDesiredRowFor("joao", "talha")
 }

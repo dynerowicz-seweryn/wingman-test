@@ -1,70 +1,30 @@
 package me.dynerowicz.wtest.tasks
 
 import android.database.Cursor
-import android.database.sqlite.SQLiteOpenHelper
+import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.util.Log
-import me.dynerowicz.wtest.database.DatabaseContract
-import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.database.QueryBuilder
+import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 class DatabaseQueryTask(
-    private val dbHelper: SQLiteOpenHelper,
+    private val database: SQLiteDatabase,
     private val queryListener: DatabaseQueryListener? = null
-) : AsyncTask<String, Unit, List<PostalCodeRow>>() {
+) : AsyncTask<QueryBuilder, Unit, Cursor>() {
 
-    private fun constructQuery(inputs: Array<out String?>): String {
-        val queryBuilder = getBaseQuery()
+    override fun doInBackground(vararg queries: QueryBuilder): Cursor {
+        if (queries.isEmpty())
+            throw IllegalArgumentException("DatabaseQueryTask requires a query string")
 
-        var postalCodeFound = false
+        val query = queries.first().toString()
+        Log.v(TAG, "Query: $query")
 
-        Log.v(TAG, "Processing <$inputs>")
-        inputs.forEach { input ->
-            if (input != null) {
-                var inputConsumed = false
-                try {
-                    val parsedLong = input.toLong()
-                    //TODO: case where the parsed long is a partial postal code: '37' should result in searching for postal codes between '3700' and '3800'
-                    // if we already found a Postal Code and an Extension, consume this input but ignore it
-                    if (!postalCodeFound) {
-                        queryBuilder.matchPostalCodeWithExtensionMinimum = parsedLong * Math.pow(10.0, 7.0 - input.length).toLong()
-                        queryBuilder.matchPostalCodeWithExtensionMaximum = (parsedLong * Math.pow(10.0, 7.0 - input.length) + (Math.pow(10.0, 7.0 - input.length) - 1.0)).toLong()
-                        postalCodeFound = true
-                    }
-
-                    inputConsumed = true
-
-                } catch (nfe: NumberFormatException) {
-                    // If it was not possible to parse to a Long, the if after will take care of this case
-                }
-
-                if (!inputConsumed)
-                    queryBuilder.addLocalityKeyword(input)
-            }
-        }
-
-        return queryBuilder.build()
+        return database.rawQuery(query, null)
     }
 
-    override fun doInBackground(vararg inputs: String?): MutableList<PostalCodeRow> {
-        val database = dbHelper.readableDatabase
-        val query = constructQuery(inputs)
-        Log.v(TAG, "Executing query : $query")
-        val cursor = database.rawQuery(query, null)
-        val results = ArrayList<PostalCodeRow>()
-
-        if (cursor.moveToFirst()) {
-            while (!cursor.isAfterLast) {
-                results.add(cursor.getPostalCodeRow())
-                cursor.moveToNext()
-            }
-        }
-        return results
-    }
-
-    override fun onPostExecute(results: List<PostalCodeRow>) {
+    override fun onPostExecute(results: Cursor) {
         super.onPostExecute(results)
-        Log.v("DatabaseQueryTask", "onPostExecute : ${results.size} rows found")
+        Log.v("DatabaseQueryTask", "onPostExecute : ${results.count} rows found")
         queryListener?.onQueryComplete(results)
     }
 
@@ -75,13 +35,6 @@ class DatabaseQueryTask(
 
     companion object {
         const val TAG = "DatabaseQueryTask"
-
-        fun getBaseQuery() = QueryBuilder().apply {
-            select = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION,
-                             DatabaseContract.COLUMN_LOCALITY)
-            fromTable = DatabaseContract.TABLE_NAME
-            orderBy = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION)
-        }
     }
 }
 

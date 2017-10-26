@@ -6,11 +6,10 @@ import android.util.Log
 import me.dynerowicz.wtest.database.DatabaseContract
 import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.utils.parseCsvLine
-import org.apache.commons.lang3.StringUtils
 import java.io.File
 import java.io.IOException
-import java.text.Normalizer
 
+// TODO: take into account the encoding of the CSV file ...
 class CsvImporterTask(
         private val database: SQLiteDatabase,
         private val csvFile: File,
