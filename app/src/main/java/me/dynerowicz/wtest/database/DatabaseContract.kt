@@ -6,10 +6,8 @@ import android.provider.BaseColumns
 /** Contract describing the table used to encode the postal codes. */
 object DatabaseContract {
     const val TABLE_NAME = "postalCodes"
-    const val COLUMN_POSTAL_CODE = "postalCode"
-    const val COLUMN_EXTENSION = "extension"
+    const val COLUMN_POSTAL_CODE_WITH_EXTENSION = "postalCodeWithExtension"
     const val COLUMN_LOCALITY = "locality"
-    const val COLUMN_LOCALITY_NORMALIZED = "localityNormalized"
 
     private const val INDEX_POSTAL_CODE = "IDX_POSTAL_CODE"
 
@@ -21,25 +19,21 @@ object DatabaseContract {
 
     const val CREATE_TABLE_STATEMENT =
         "CREATE TABLE ${DatabaseContract.TABLE_NAME} (" +
-        "${BaseColumns._ID} INTEGER PRIMARY KEY, " +
-        "${DatabaseContract.COLUMN_POSTAL_CODE} INTEGER NOT NULL, " +
-        "${DatabaseContract.COLUMN_EXTENSION} INTEGER NOT NULL, " +
-        "${DatabaseContract.COLUMN_LOCALITY} TEXT NOT NULL, " +
-        "${DatabaseContract.COLUMN_LOCALITY_NORMALIZED} TEXT" +
+        "${BaseColumns._ID} INTEGER PRIMARY KEY" +
+        ", ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} INTEGER NOT NULL" +
+        ", ${DatabaseContract.COLUMN_LOCALITY} TEXT NOT NULL COLLATE UNICODE" +
         ")"
 
     const val CREATE_INDEX_STATEMENT =
         "CREATE INDEX IF NOT EXISTS ${DatabaseContract.INDEX_POSTAL_CODE} " +
-        "ON ${DatabaseContract.TABLE_NAME}(${DatabaseContract.COLUMN_POSTAL_CODE}, ${DatabaseContract.COLUMN_EXTENSION})"
+        "ON ${DatabaseContract.TABLE_NAME}(${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION})"
 
     const val DROP_TABLE_STATEMENT =
         "DROP TABLE IF EXISTS ${DatabaseContract.TABLE_NAME}"
 
     const val INSERT_QUERY =
         "INSERT into ${DatabaseContract.TABLE_NAME} (" +
-        "${DatabaseContract.COLUMN_POSTAL_CODE}, " +
-        "${DatabaseContract.COLUMN_EXTENSION}, " +
-        "${DatabaseContract.COLUMN_LOCALITY}, " +
-        "${DatabaseContract.COLUMN_LOCALITY_NORMALIZED}" +
-        ") VALUES (?,?,?,?)"
+        "${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}" +
+        ",${DatabaseContract.COLUMN_LOCALITY}" +
+        ") VALUES (?,?)"
 }

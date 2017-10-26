@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import kotlinx.android.synthetic.main.fragment_search.*
+import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
 import me.dynerowicz.wtest.tasks.DatabaseQueryListener
 import me.dynerowicz.wtest.tasks.DatabaseQueryTask
@@ -31,6 +32,7 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
     override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         buttonSearch.setOnClickListener(this)
+
         fieldSearchResults.setHasFixedSize(true)
         fieldSearchResults.adapter = recyclerViewAdapter
         fieldSearchResults.layoutManager = LinearLayoutManager(context)
@@ -55,18 +57,17 @@ class SearchFragment : Fragment(), View.OnClickListener, DatabaseQueryListener {
             val splitInput = searchInput.split(" ").toTypedArray()
 
             //TODO: prevent SQL injection
-            recyclerViewAdapter.postalCodeRowsCursor?.close()
             DatabaseQueryTask(localDbHelper, this).execute(*splitInput)
         }
     }
 
-    override fun onQueryComplete(results: Cursor) {
+    override fun onQueryComplete(results: List<PostalCodeRow>) {
         searchInProgress?.dismiss()
         Log.v(TAG, "onQueryComplete")
-        Log.v(TAG, "Found ${results.count} matching postal codes entries")
-        Toast.makeText(context, "Found ${results.count} matching postal codes entries", Toast.LENGTH_LONG).show()
+        Log.v(TAG, "Found ${results.size} matching postal codes entries")
+        Toast.makeText(context, "Found ${results.size} matching postal codes entries", Toast.LENGTH_LONG).show()
         recyclerViewAdapter.postalCodeRowsCursor = results
-        fieldSearchResults.adapter = recyclerViewAdapter
+        recyclerViewAdapter.notifyDataSetChanged()
     }
 
     override fun onQueryCancelled() {

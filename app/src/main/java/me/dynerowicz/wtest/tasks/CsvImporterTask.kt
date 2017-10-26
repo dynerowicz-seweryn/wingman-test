@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.AsyncTask
 import android.util.Log
 import me.dynerowicz.wtest.database.DatabaseContract
+import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.utils.parseCsvLine
 import org.apache.commons.lang3.StringUtils
 import java.io.File
@@ -134,11 +135,10 @@ class CsvImporterTask(
     private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) =
         insertStatement.run {
             clearBindings()
-            bindLong(1, postalCode)
-            bindLong(2, extension)
-            bindString(3, locality)
-            //TODO: stripAccents() makes the whole import process SLOW. Fix this.
-            bindString(4, StringUtils.stripAccents(locality))
+            bindLong(1, PostalCodeRow.postalCodeWithExtension(postalCode, extension))
+            bindString(2, locality)
+            //TODO: stripAccents() makes the whole import process SLOW. Find a better way to handle this.
+            //bindString(3, StringUtils.stripAccents(locality))
             executeInsert()
             clearBindings()
         }

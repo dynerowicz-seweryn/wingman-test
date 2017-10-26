@@ -56,7 +56,7 @@ class CsvImporterTask100000EntriesTest : CsvImportListener {
 
     @Test
     fun testPerformSelect3750() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE} = 3750"
+        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} = 3750"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 1184)
         cursor.close()
@@ -64,7 +64,7 @@ class CsvImporterTask100000EntriesTest : CsvImportListener {
 
     @Test
     fun testPerformSelect3700to3800() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE} BETWEEN 3700 AND 3800"
+        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} BETWEEN 3700 AND 3800"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 7375)
         cursor.close()

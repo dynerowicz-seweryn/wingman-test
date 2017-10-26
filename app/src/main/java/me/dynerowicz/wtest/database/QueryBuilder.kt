@@ -1,12 +1,12 @@
 package me.dynerowicz.wtest.database
 
-import org.apache.commons.lang3.StringUtils
-
 class QueryBuilder {
     var select: Array<out String>? = null
     var fromTable: String? = null
-    var matchPostalCode: Long? = null
-    var matchExtension: Long? = null
+
+    var matchPostalCodeWithExtensionMinimum: Long? = null
+    var matchPostalCodeWithExtensionMaximum: Long? = null
+
     private var matchLocalityKeywords = ArrayList<String>()
     var orderBy: Array<out String>? = null
 
@@ -35,23 +35,18 @@ class QueryBuilder {
 
                 append(" FROM $table")
 
-                if (matchPostalCode != null || matchExtension != null || matchLocalityKeywords.isNotEmpty()) {
+                if (matchPostalCodeWithExtensionMinimum != null || matchPostalCodeWithExtensionMaximum != null || matchLocalityKeywords.isNotEmpty()) {
                     append(" WHERE ")
 
-                    matchPostalCode?.let {
-                        append("${DatabaseContract.COLUMN_POSTAL_CODE} == $matchPostalCode")
-                        if (matchExtension != null || matchLocalityKeywords.isNotEmpty())
-                            append(" AND ")
-                    }
+                    if (matchPostalCodeWithExtensionMinimum != null || matchPostalCodeWithExtensionMaximum != null) {
+                        appendPostalCodeConstraint(matchPostalCodeWithExtensionMinimum, matchPostalCodeWithExtensionMaximum)
 
-                    matchExtension?.let {
-                        append("${DatabaseContract.COLUMN_EXTENSION} == $matchExtension")
                         if (matchLocalityKeywords.isNotEmpty())
                             append(" AND ")
                     }
 
                     matchLocalityKeywords.forEachIndexed { index, keyword ->
-                        append("${DatabaseContract.COLUMN_LOCALITY_NORMALIZED} LIKE '%${StringUtils.stripAccents(keyword)}%'")
+                        appendLocalityConstraint(keyword)
                         if (index < matchLocalityKeywords.size - 1)
                             append(" AND ")
                     }
@@ -74,4 +69,52 @@ class QueryBuilder {
     companion object {
         val TAG = QueryBuilder::class.java.simpleName
     }
+
+
+}
+
+//TODO: this is awful ...
+private fun expandedKeywords(expanded: MutableList<String>, keyword: String, index: Int = 0, partialKeyword: StringBuilder = StringBuilder()) {
+    if (index == keyword.length)
+        expanded.add(partialKeyword.toString())
+    else {
+        val character = keyword[index]
+        val cases: String =
+            when (character) {
+                'a', 'â', 'ã', 'à' -> "aâãà"
+                'e', 'é', 'ê'      -> "eéê"
+                'i', 'í'           -> "ií"
+                'o', 'ó', 'ô', 'õ' -> "oóôõ"
+                'u', 'ú'           -> "uú"
+                else               -> character.toString()
+            }
+        cases.forEach { characterAlternative ->
+            partialKeyword.append(characterAlternative)
+            expandedKeywords(expanded, keyword, index + 1, partialKeyword)
+            partialKeyword.deleteCharAt(index)
+        }
+    }
+}
+
+private fun StringBuilder.appendLocalityConstraint(keyword: String) {
+    val expandedKeywords = ArrayList<String>()
+    expandedKeywords(expandedKeywords, keyword.toLowerCase())
+
+    expandedKeywords.forEachIndexed { index, expandedKeyword ->
+        append("(${DatabaseContract.COLUMN_LOCALITY} LIKE '%$expandedKeyword%' OR ")
+        append("${DatabaseContract.COLUMN_LOCALITY} LIKE '%${expandedKeyword.capitalize()}%')")
+        if (index < expandedKeywords.size - 1)
+            append(" OR ")
+    }
+}
+
+private fun StringBuilder.appendPostalCodeConstraint(minimum: Long?, maximum: Long?) {
+    if (minimum != null)
+        append("$minimum <= ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
+
+    if (minimum != null && maximum != null)
+        append(" AND ")
+
+    if (maximum != null)
+        append("${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum")
 }

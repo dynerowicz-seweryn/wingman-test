@@ -54,14 +54,11 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
         task.execute(*inputs)
         ShadowApplication.runBackgroundTasks()
 
-        val cursor = task.get()
-        var desiredRowFound = false
+        val results = task.get()
 
-        cursor.moveToFirst()
-        while(!cursor.isAfterLast && !desiredRowFound)
-            desiredRowFound = (desiredRow == cursor.getPostalCodeRow())
-
-        Assert.assertTrue ( desiredRowFound )
+        Assert.assertTrue (
+            results.any { resultRow -> resultRow == desiredRow }
+        )
     }
 
     @Test

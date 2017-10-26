@@ -55,7 +55,7 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseContains3750043() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=43"
+        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750043"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 1)
         cursor.close()
@@ -63,7 +63,7 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseContains3750043ForAlmasDaAreosa() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=43"
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750043"
         val cursor = database.rawQuery(query, null)
         cursor.moveToFirst()
         Assert.assertTrue(cursor.getString(0) == "Almas da Areosa")
@@ -72,7 +72,7 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseDoesNotContain3750902() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=902"
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750902"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 0)
         cursor.close()
@@ -80,7 +80,7 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseDoesNotContain3750016ForLandiosa() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE}=3750 AND ${DatabaseContract.COLUMN_EXTENSION}=16"
+        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750016"
         val cursor = database.rawQuery(query, null)
         cursor.moveToFirst()
         Assert.assertTrue(cursor.getString(0) != "Landiosa")
