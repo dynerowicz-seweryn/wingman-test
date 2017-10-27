@@ -4,9 +4,6 @@ import android.util.Log
 import me.dynerowicz.wtest.presenter.PostalCodeRow
 
 class QueryBuilder(
-    val select: Array<out String>,
-    val fromTable: String,
-    val orderBy: Array<out String> = arrayOf(),
     val limitTo: Int = -1,
     vararg inputs: String
 ) {
@@ -47,31 +44,23 @@ class QueryBuilder(
         val stringBuilder = StringBuilder()
 
         // Constructing the projection
-        stringBuilder.append("SELECT DISTINCT ")
+        stringBuilder.append("SELECT DISTINCT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_LOCALITY_NAME}")
+        stringBuilder.append(" FROM ${DatabaseContract.LOCALITY_NAMES_TABLE} LN")
+        stringBuilder.append(" INNER JOIN ${DatabaseContract.POSTAL_CODES_TABLE} PC")
+        stringBuilder.append(" ON PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER} == LN.${DatabaseContract.COLUMN_LOCALITY_NAME_ID}")
 
-        if (select.isEmpty())
-            stringBuilder.append("*")
-        else select.forEachIndexed { index, column ->
-            stringBuilder.append(column)
-            if (index < select.size - 1)
-                stringBuilder.append(',')
-        }
-
-        stringBuilder.append(" FROM $fromTable")
-
-        // Constructing the WHERE clause
         if (starting != null || postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null || localityKeywords.isNotEmpty()) {
             stringBuilder.append(" WHERE ")
 
+            // Constructing the remainder of the WHERE clause
             if (starting != null) {
                 stringBuilder.appendStarting(starting)
                 if (postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null || localityKeywords.isNotEmpty())
-                    stringBuilder.append(" AND ")
+                stringBuilder.append(" AND ")
             }
 
             if (postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null) {
                 stringBuilder.appendPostalCodeConstraint(postalCodeWithExtensionMinimum, postalCodeWithExtensionMaximum)
-
                 if (localityKeywords.isNotEmpty())
                     stringBuilder.append(" AND ")
             }
@@ -84,14 +73,7 @@ class QueryBuilder(
         }
 
         // Constructing the ORDER BY clause
-        if (orderBy.isNotEmpty()) {
-            stringBuilder.append(" ORDER BY ")
-            orderBy.forEachIndexed { index, column ->
-                stringBuilder.append(column)
-                if (index < orderBy.size - 1)
-                    stringBuilder.append(',')
-            }
-        }
+        stringBuilder.append(" ORDER BY LN.${DatabaseContract.COLUMN_LOCALITY_NAME}, PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
 
         // Constructing the LIMIT clause
         if (limitTo > 0)
@@ -136,8 +118,8 @@ private fun StringBuilder.appendLocalityConstraint(keyword: String) {
 
     append('(')
     expandedKeywords.forEachIndexed { index, expandedKeyword ->
-        append("(${DatabaseContract.COLUMN_LOCALITY} LIKE '%$expandedKeyword%' OR ")
-        append("${DatabaseContract.COLUMN_LOCALITY} LIKE '%${expandedKeyword.capitalize()}%')")
+        append("(LN.${DatabaseContract.COLUMN_LOCALITY_NAME} LIKE '%$expandedKeyword%' OR ")
+        append(" LN.${DatabaseContract.COLUMN_LOCALITY_NAME} LIKE '%${expandedKeyword.capitalize()}%')")
         if (index < expandedKeywords.size - 1)
             append(" OR ")
     }
@@ -146,18 +128,18 @@ private fun StringBuilder.appendLocalityConstraint(keyword: String) {
 
 private fun StringBuilder.appendStarting(pcRow: PostalCodeRow?) {
     if(pcRow != null) {
-        append("(${pcRow.postalCodeWithExtension} <= ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} AND ")
-        append("'${pcRow.locality}' <= ${DatabaseContract.COLUMN_LOCALITY})")
+        append("(${pcRow.postalCodeWithExtension} <= PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} AND ")
+        append("'${pcRow.locality}' <= LN.${DatabaseContract.COLUMN_LOCALITY_NAME})")
     }
 }
 
 private fun StringBuilder.appendPostalCodeConstraint(minimum: Long? = null, maximum: Long? = null) {
     if (minimum != null)
-        append("$minimum <= ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
+        append("$minimum <= PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
 
     if (minimum != null && maximum != null)
         append(" AND ")
 
     if (maximum != null)
-        append("${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum")
+        append("PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum")
 }

@@ -1,6 +1,7 @@
 package me.dynerowicz.wtest.database
 
 import android.database.sqlite.SQLiteDatabase
+import android.provider.BaseColumns
 import me.dynerowicz.wtest.tasks.CsvImporterTask
 import org.junit.After
 import org.junit.Assert
@@ -47,15 +48,28 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseHas20Entries() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME}"
+        val query = "SELECT * FROM ${DatabaseContract.POSTAL_CODES_TABLE}"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 20)
         cursor.close()
     }
 
     @Test
+    fun databaseContainsStuff() {
+        val query = " SELECT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_LOCALITY_NAME} " +
+                    " FROM ${DatabaseContract.POSTAL_CODES_TABLE} PC INNER JOIN ${DatabaseContract.LOCALITY_NAMES_TABLE} LN " +
+                    " WHERE PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER} == LN.${DatabaseContract.COLUMN_LOCALITY_NAME_ID}"
+        val cursor = database.rawQuery(query, null)
+
+        while(cursor.moveToNext())
+            println("Row: ${cursor.getLong(0)}; ${cursor.getString(1)}")
+
+        cursor.close()
+    }
+
+    @Test
     fun databaseContains3750043() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750043"
+        val query = QueryBuilder(inputs = "3750043").toString()
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 1)
         cursor.close()
@@ -63,16 +77,16 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseContains3750043ForAlmasDaAreosa() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750043"
+        val query = QueryBuilder(inputs = "3750043").toString()
         val cursor = database.rawQuery(query, null)
         cursor.moveToFirst()
-        Assert.assertTrue(cursor.getString(0) == "Almas da Areosa")
+        Assert.assertTrue(cursor.getString(1) == "Almas da Areosa")
         cursor.close()
     }
 
     @Test
     fun databaseDoesNotContain3750902() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750902"
+        val query = QueryBuilder(inputs = "3750902").toString()
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 0)
         cursor.close()
@@ -80,10 +94,10 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseDoesNotContain3750016ForLandiosa() {
-        val query = "SELECT ${DatabaseContract.COLUMN_LOCALITY} FROM ${DatabaseContract.TABLE_NAME} WHERE ${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}=3750016"
+        val query = QueryBuilder(inputs = "3750016").toString()
         val cursor = database.rawQuery(query, null)
         cursor.moveToFirst()
-        Assert.assertTrue(cursor.getString(0) != "Landiosa")
+        Assert.assertTrue(cursor.getString(1) != "Landiosa")
         cursor.close()
     }
 }

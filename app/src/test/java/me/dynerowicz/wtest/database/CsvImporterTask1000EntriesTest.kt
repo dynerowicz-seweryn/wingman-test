@@ -47,7 +47,7 @@ class CsvImporterTask1000EntriesTest {
 
     @Test
     fun testHas1000EntriesInDatabase() {
-        val query = "SELECT * FROM ${DatabaseContract.TABLE_NAME}"
+        val query = "SELECT * FROM ${DatabaseContract.POSTAL_CODES_TABLE}"
         val cursor = database.rawQuery(query, null)
         Assert.assertTrue(cursor.count == 1000)
         cursor.close()

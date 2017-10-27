@@ -7,8 +7,8 @@
         android:title="@string/title_search" />
 
     <item
-        android:id="@+id/navigation_settings"
-        android:icon="@drawable/ic_settings_black_24dp"
-        android:title="@string/title_settings" />
+        android:id="@+id/navigation_about"
+        android:icon="@drawable/ic_info_outline_black_24dp"
+        android:title="@string/title_about" />
 
 </menu>

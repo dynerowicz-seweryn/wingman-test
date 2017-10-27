@@ -15,6 +15,7 @@ class CsvImporterTask(
         private val csvFile: File,
         private val importListener: CsvImportListener?
 ) : AsyncTask<Unit, Int, Pair<Long, Long>>() {
+    private var localityIdentifiers = HashMap<String, Long>()
 
     private fun determineEntryCount(csvFile: File): Long {
         val reader = csvFile.bufferedReader()
@@ -126,21 +127,32 @@ class CsvImporterTask(
 
         csvFileReader.close()
 
+        database.execSQL(DatabaseContract.CREATE_POSTAL_CODES_INDEX)
+        database.execSQL(DatabaseContract.CREATE_LOCALITY_ID_INDEX)
+
         return Pair(importedEntriesCount, invalidEntriesCount)
     }
 
     // Database insertion operation
-    private val insertStatement = database.compileStatement(DatabaseContract.INSERT_QUERY)
-    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) =
-        insertStatement.run {
+    private val insertIntoLocalityNames = database.compileStatement(DatabaseContract.INSERT_INTO_LOCALITY_NAMES_STATEMENT)
+    private val insertIntoPostalCodes = database.compileStatement(DatabaseContract.INSERT_INTO_POSTAL_CODES_STATEMENT)
+    private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) {
+        val localityIdentifier: Long = localityIdentifiers[locality] ?:
+            insertIntoLocalityNames.run {
+                bindString(1, locality)
+                val assignedIdentifier = executeInsert()
+                localityIdentifiers.put(locality, assignedIdentifier)
+                assignedIdentifier
+            }
+
+        insertIntoPostalCodes.run {
             clearBindings()
             bindLong(1, PostalCodeRow.postalCodeWithExtension(postalCode, extension))
-            bindString(2, locality)
-            //TODO: stripAccents() makes the whole import process SLOW. Find a better way to handle this.
-            //bindString(3, StringUtils.stripAccents(locality))
+            bindLong(2, localityIdentifier)
             executeInsert()
             clearBindings()
         }
+    }
 
     companion object {
         const val TAG = "CsvImporterTask"

@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
     }
 
     private val search = SearchFragment()
-    private val settings = SettingsFragment()
+    private val about = AboutFragment()
 
     private var currentFragment: Fragment = search
 
@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         val newFragment: Fragment? =
             when (item.itemId) {
                 R.id.navigation_search -> search
-                R.id.navigation_settings -> settings
+                R.id.navigation_about -> about
                 else -> null
             }
 

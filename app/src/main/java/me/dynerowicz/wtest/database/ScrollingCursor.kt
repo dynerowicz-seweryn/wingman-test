@@ -18,11 +18,8 @@ class ScrollingCursor(
         set(value) {
             value?.let {
                 queryBuilder = QueryBuilder(
-                        select = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION, DatabaseContract.COLUMN_LOCALITY),
-                        fromTable = DatabaseContract.TABLE_NAME,
-                        orderBy = arrayOf(DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION),
-                        limitTo = windowSize,
-                        inputs = *value
+                    limitTo = windowSize,
+                    inputs = *value
                 )
             }
         }
