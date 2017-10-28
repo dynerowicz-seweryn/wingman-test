@@ -7,15 +7,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.database.sqlite.SQLiteDatabase
-import android.os.Binder
 import android.os.IBinder
 import android.preference.PreferenceManager
 import android.util.Log
 import me.dynerowicz.wtest.R
-import me.dynerowicz.wtest.tasks.CsvImportListener
-import me.dynerowicz.wtest.tasks.CsvImporterTask
 import me.dynerowicz.wtest.tasks.CsvDownloadListener
 import me.dynerowicz.wtest.tasks.CsvDownloadTask
+import me.dynerowicz.wtest.tasks.CsvImportListener
+import me.dynerowicz.wtest.tasks.CsvImporterTask
 import java.io.File
 import java.net.URL
 
@@ -65,14 +64,14 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
                 initializeDatabase()
             }
         } else {
-            database = databaseHelper.readableDatabase
-            sendBroadcast(DatabaseInitializedBroadcast)
+            publishReport(operation = INITIALIZATION, status = COMPLETED)
+            stopSelf()
         }
 
         return START_NOT_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder = DatabaseManagerBinder()
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         Log.v(TAG, "onDestroy")
@@ -81,8 +80,29 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
         super.onDestroy()
     }
 
+    private fun publishReport(operation: String, status: String, percentage: Int? = null) {
+        val report = Intent(INITIALIZATION_STATUS).apply {
+            putExtra(OPERATION, operation)
+            putExtra(STATUS, status)
+            percentage?.let {
+                putExtra(PROGRESS, percentage)
+            }
+        }
+
+        notificationBuilder.apply {
+            setContentText(prettyString(operation, status, percentage))
+            percentage?.let {
+                setProgress(100, percentage, false)
+            }
+        }
+
+        notificationManager.notify(notificationId, notificationBuilder.build())
+
+        sendBroadcast(report)
+    }
+
     private fun initializeDatabase() {
-        sendBroadcast(DatabaseInitializingBroadcast)
+        publishReport(operation = INITIALIZATION, status = STARTING)
 
         database = databaseHelper.writableDatabase
 
@@ -92,83 +112,104 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
         val csvFile = createTempFile(FILENAME, null, cacheDir)
         cachedCsvFile = csvFile
 
+        publishReport(operation = DOWNLOAD, status = STARTING)
+
         downloader = CsvDownloadTask(URL(getString(R.string.default_csv_url)), csvFile, downloadListener = this)
         importer = CsvImporterTask(database, cachedCsvFile, importListener = this)
 
         downloader?.execute()
     }
 
-    override fun onDownloadUpdate(new: Int) {
-        notificationBuilder.setContentText("Download in progress : $new %")
-        notificationBuilder.setProgress(100, new, false)
-        notificationManager.notify(notificationId, notificationBuilder.build())
+    private fun terminate() {
+        cachedCsvFile.delete()
+        databaseHelper.close()
+        stopForeground(true)
+        stopSelf()
     }
+
+    override fun onDownloadUpdate(percentage: Int) =
+        publishReport(operation = DOWNLOAD, status = RUNNING, percentage = percentage)
 
     override fun onDownloadComplete(success: Boolean) {
         super.onDownloadComplete(success)
         if (success) {
-            notificationBuilder.setContentText("Preparing CSV import ...")
-            notificationBuilder.setProgress(100, 0, true)
-            notificationManager.notify(notificationId, notificationBuilder.build())
+            publishReport(operation = DOWNLOAD, status = COMPLETED)
+
+            publishReport(operation = IMPORT, status = STARTING)
 
             importer?.execute()
+        } else {
+            publishReport(operation = DOWNLOAD, status = FAILED)
+            terminate()
         }
     }
 
-    override fun onDownloadFailed(reason: String) {
-        super.onDownloadFailed(reason)
-        notificationBuilder.setContentText("Download failed.")
-        notificationManager.notify(notificationId, notificationBuilder.build())
-        cachedCsvFile.delete()
-    }
-
-    override fun onDownloadCancelled() {
-        notificationBuilder.setContentText("Download cancelled.")
-        notificationManager.notify(notificationId, notificationBuilder.build())
-        cachedCsvFile.delete()
-    }
-
-    override fun onImportProgressUpdate(new: Int) {
-        notificationBuilder.setContentText("Importing CSV entries : $new %")
-        notificationBuilder.setProgress(100, new, false)
-        notificationManager.notify(notificationId, notificationBuilder.build())
-    }
+    override fun onImportProgressUpdate(percentage: Int) =
+        publishReport(operation = IMPORT, status = RUNNING, percentage = percentage)
 
     override fun onImportComplete(result: Pair<Long, Long>) {
-        notificationBuilder.setContentText("Import complete.")
-        notificationBuilder.setProgress(100, 100, false)
-        notificationManager.notify(notificationId, notificationBuilder.build())
-
         managerSettings.edit().putBoolean(DATABASE_INITIALIZED, true).apply()
 
-        cachedCsvFile.delete()
-        stopForeground(true)
-        database.close()
-        database = databaseHelper.readableDatabase
-
-        sendBroadcast(DatabaseInitializedBroadcast)
+        publishReport(operation = IMPORT, status = COMPLETED)
+        publishReport(operation = INITIALIZATION, status = COMPLETED)
     }
 
     override fun onImportCancelled() {
-        notificationBuilder.setContentText("Import cancelled.")
-        notificationManager.notify(notificationId, notificationBuilder.build())
-        cachedCsvFile.delete()
+        publishReport(operation = IMPORT, status = FAILED)
+        terminate()
     }
 
-    inner class DatabaseManagerBinder : Binder() {
-        fun getDatabaseHelper(): DatabaseHelper = databaseHelper
-        fun getDatabase(): SQLiteDatabase = databaseHelper.readableDatabase
-    }
+    fun prettyString(operation: String, status: String, progressPercentage: Int?): String =
+            StringBuilder().apply {
+                when(operation) {
+                    INITIALIZATION -> {
+                        when (status) {
+                            STARTING -> append(resources.getString(R.string.InitializationStarting))
+                            RUNNING -> append(resources.getString(R.string.InitializationRunning))
+                            COMPLETED -> append(resources.getString(R.string.InitializationCompleted))
+                            FAILED -> append(resources.getString(R.string.InitializationFailed))
+                        }
+                    }
+                    DOWNLOAD -> {
+                        when (status) {
+                            STARTING -> append(resources.getString(R.string.DownloadStarting))
+                            RUNNING -> append(resources.getString(R.string.DownloadRunning))
+                            COMPLETED -> append(resources.getString(R.string.DownloadCompleted))
+                            FAILED -> append(resources.getString(R.string.DownloadFailed))
+                        }
+                    }
+                    IMPORT -> {
+                        when (status) {
+                            STARTING -> append(resources.getString(R.string.ImportStarting))
+                            RUNNING -> append(resources.getString(R.string.ImportRunning))
+                            COMPLETED -> append(resources.getString(R.string.ImportCompleted))
+                            FAILED -> append(resources.getString(R.string.ImportFailed))
+                        }
+                    }
+                }
 
+                if (progressPercentage != null && status == RUNNING)
+                    append(" $progressPercentage %")
+            }.toString()
+    
     companion object {
         private const val TAG = "DatabaseManagerService"
         private const val FILENAME = "postalCodes.csv"
-        private const val DATABASE_INITIALIZED = "DatabaseInitialized"
+        const val DATABASE_INITIALIZED = "DatabaseInitialized"
 
-        const val DB_INITIALIZING = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZING"
-        const val DB_INITIALIZED  = "me.dynerowicz.wtest.database.DatabaseManagerService.INITIALIZED"
+        const val INITIALIZATION_STATUS = "me.dynerowicz.wtest.service.DatabaseInitializationService.STATUS"
 
-        private val DatabaseInitializingBroadcast = Intent(DB_INITIALIZING)
-        private val DatabaseInitializedBroadcast  = Intent(DB_INITIALIZED)
+        const val OPERATION = "OP"
+        const val STATUS = "ST"
+        const val PROGRESS = "PR"
+
+        const val INITIALIZATION = "INITIALIZATION"
+        const val DOWNLOAD = "DOWNLOAD"
+        const val IMPORT = "IMPORT"
+
+        const val STARTING = "STARTING"
+        const val RUNNING = "RUNNING"
+        const val COMPLETED = "COMPLETED"
+        const val FAILED = "FAILED"
     }
 }

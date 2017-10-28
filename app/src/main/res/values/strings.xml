@@ -13,4 +13,18 @@
     <string name="SearchInProgress">Search in progress …</string>
     <string name="searchButton">Search button</string>
     <string name="about">Postal code querying tool</string>
+    <string name="Initialization">Database initialization ...</string>
+    <string name="InitializationStarting">Database initialization ...</string>
+    <string name="InitializationRunning">Database initialization in progress</string>
+    <string name="InitializationCompleted">Database initialization complete</string>
+    <string name="InitializationFailed">Database initialization failed</string>
+    <string name="DownloadStarting">Downloading CSV file ...</string>
+    <string name="DownloadRunning">Download in progress</string>
+    <string name="DownloadCompleted">Download completed</string>
+    <string name="DownloadFailed">Download failed</string>
+    <string name="ImportStarting">Importing of CSV file</string>
+    <string name="ImportRunning">Import in progress</string>
+    <string name="ImportCompleted">Import completed</string>
+    <string name="ImportFailed">Import failed</string>
+    <string name="delete_database">Delete database</string>
 </resources>

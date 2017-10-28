@@ -12,8 +12,8 @@ import android.view.ViewGroup
 import kotlinx.android.synthetic.main.fragment_search.*
 import me.dynerowicz.wtest.database.ScrollingCursor
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
-import android.content.Context.INPUT_METHOD_SERVICE
 import android.view.inputmethod.InputMethodManager
+import me.dynerowicz.wtest.database.DatabaseHelper
 
 
 class SearchFragment : Fragment(), View.OnClickListener {
@@ -21,8 +21,19 @@ class SearchFragment : Fragment(), View.OnClickListener {
 
     private lateinit var keyboardManager: InputMethodManager
 
+    var dbHelper: DatabaseHelper? = null
     var database: SQLiteDatabase? = null
     var scroller: ScrollingCursor? = null
+
+    fun initialize(context: Context) {
+        dbHelper = DatabaseHelper(context)
+        database = dbHelper?.readableDatabase
+    }
+
+    fun cleanup() {
+        database?.close()
+        dbHelper?.close()
+    }
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -36,6 +47,8 @@ class SearchFragment : Fragment(), View.OnClickListener {
     override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        
+
         button_search.setOnClickListener(this)
 
         field_search_results.setHasFixedSize(true)
@@ -43,19 +56,18 @@ class SearchFragment : Fragment(), View.OnClickListener {
         field_search_results.layoutManager = LinearLayoutManager(context)
     }
 
-    override fun onClick(p0: View?) {
-        when (p0) {
+    override fun onClick(view: View?) {
+        when (view) {
             button_search -> {
                 performSearch(field_search.text.toString())
                 keyboardManager.hideSoftInputFromWindow(field_search.windowToken, 0)
             }
-            else -> Log.e(TAG, "Unknown view clicked: ${p0?.id}")
+            else -> Log.e(TAG, "Unknown view clicked: ${view?.id}")
         }
     }
-    
-    override fun onDestroyView() {
+
+    fun dismissKeyboard() {
         keyboardManager.hideSoftInputFromWindow(field_search.windowToken, 0)
-        super.onDestroyView()
     }
 
     private fun performSearch(searchInput: String) {

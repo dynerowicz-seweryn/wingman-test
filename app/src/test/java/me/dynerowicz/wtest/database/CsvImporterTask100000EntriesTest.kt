@@ -70,7 +70,7 @@ class CsvImporterTask100000EntriesTest : CsvImportListener {
         cursor.close()
     }
 
-    override fun onImportProgressUpdate(new: Int) = println("Import progress: $new %")
+    override fun onImportProgressUpdate(percentage: Int) = println("Import progress: $percentage %")
     override fun onImportComplete(result: Pair<Long, Long>) = println("Import completed")
     override fun onImportCancelled() = println("Import cancelled")
 }

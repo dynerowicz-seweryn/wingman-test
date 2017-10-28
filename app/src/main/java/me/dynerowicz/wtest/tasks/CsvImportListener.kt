@@ -3,8 +3,8 @@ package me.dynerowicz.wtest.tasks
 import android.util.Log
 
 interface CsvImportListener {
-    fun onImportProgressUpdate(new: Int) {
-        Log.v(TAG, "Import in progress : $new %")
+    fun onImportProgressUpdate(percentage: Int) {
+        Log.v(TAG, "Import in progress : $percentage %")
     }
 
     fun onImportComplete(result: Pair<Long, Long>) {
