@@ -22,8 +22,9 @@ class DatabaseQueryTask(
 
         val cursor = database.rawQuery(query, null)
 
-        while(cursor.moveToNext())
-            appendTo?.add(cursor.getPostalCodeRow())
+        if (appendTo != null)
+            while(cursor.moveToNext())
+                appendTo.add(cursor.getPostalCodeRow())
 
         return cursor
     }

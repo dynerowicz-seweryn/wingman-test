@@ -15,6 +15,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
 import org.robolectric.shadows.ShadowLog
 import java.io.File
+import kotlin.system.measureNanoTime
+import kotlin.system.measureTimeMillis
 
 @Config(manifest = Config.NONE)
 @RunWith(RobolectricTestRunner::class)
@@ -27,7 +29,7 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
     lateinit var database: SQLiteDatabase
 
     @Before fun setUp() {
-        ShadowLog.stream = System.out
+        //ShadowLog.stream = System.out
 
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
@@ -103,4 +105,22 @@ class DatabaseQueryTaskTest : CsvImportListener, DatabaseQueryListener {
     @Test
     fun databaseContainsDesiredRowForKeywords_joao_talha() =
             databaseContainsDesiredRowFor("joao", "talha")
+
+    @Test
+    fun databaseQueryTime() {
+        //val inputs = arrayOf("2695", "650")
+        val inputs = arrayOf("talh", "joa")
+
+        for (test in 0 .. 100) {
+            val task = DatabaseQueryTask(database, this)
+            val queryBuilder = QueryBuilder(inputs = *inputs)
+
+            val time = measureTimeMillis {
+                task.execute(queryBuilder)
+                ShadowApplication.runBackgroundTasks()
+            }
+
+            println("Query [$time ms] {${task.get().count}} : $queryBuilder")
+        }
+    }
 }

@@ -33,8 +33,8 @@ class PostalCodeRowAdapter : RecyclerView.Adapter<PostalCodeRowAdapter.PostalCod
 
     inner class PostalCodeRowHolder(val fields: ItemPostalCodeRowBinding) : RecyclerView.ViewHolder(fields.root)
 
-    override fun onMoreResultsAvailable(positionStart: Int, newCount: Int) {
-        notifyItemRangeInserted(positionStart, newCount)
+    override fun onMoreResultsAvailable(positionStart: Int, rowCount: Int) {
+        notifyItemRangeInserted(positionStart, rowCount)
     }
 
     override fun onEndOfResults() {}

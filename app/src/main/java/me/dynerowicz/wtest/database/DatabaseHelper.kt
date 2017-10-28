@@ -23,6 +23,8 @@ class DatabaseHelper(context: Context)
 
         db?.execSQL(DatabaseContract.CREATE_POSTAL_CODES_INDEX)
         db?.execSQL(DatabaseContract.CREATE_LOCALITY_NAME_INDEX)
+        db?.execSQL(DatabaseContract.CREATE_LOCALITY_ID_INDEX)
+        db?.execSQL(DatabaseContract.CREATE_NORMALIZED_NAME_ID_INDEX)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersionNumber: Int, newVersionNumber: Int) {

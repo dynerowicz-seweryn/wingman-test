@@ -84,9 +84,9 @@ class QueryBuilder(
 
         // Constructing the ORDER BY clause
         stringBuilder.append(" ORDER BY "
-                + "PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}"
-                + ","
                 + "LN.${DatabaseContract.COLUMN_NAME}"
+                + ","
+                + "PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}"
         )
 
         // Constructing the LIMIT clause
@@ -114,9 +114,9 @@ private fun StringBuilder.appendPostalCodeConstraint(minimum: Long?, maximum: Lo
 
 private fun StringBuilder.appendStartingConstraint(postalCodeRow: PostalCodeRow, maximum: Long?) {
     val pcMinimum = postalCodeRow.postalCodeWithExtension
-    append("(($pcMinimum <  PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}) OR")
-    append(" ($pcMinimum  == PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} AND")
-    append(" '${postalCodeRow.locality}' < LN.${DatabaseContract.COLUMN_NAME}))")
+    append("(('${postalCodeRow.locality}'  < LN.${DatabaseContract.COLUMN_NAME}) OR")
+    append(" ('${postalCodeRow.locality}' == LN.${DatabaseContract.COLUMN_NAME}) AND")
+    append(" ($pcMinimum < PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}))")
     if (maximum != null)
         append(" AND (PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum)")
 }
