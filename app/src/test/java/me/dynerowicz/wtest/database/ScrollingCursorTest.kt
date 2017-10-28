@@ -26,9 +26,7 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
     lateinit var database: SQLiteDatabase
 
     lateinit var scroller: ScrollingCursor
-    var currentRow = 0
     var desiredRow = PostalCodeRow(2695, 650, "São João da Talha")
-    var desiredRowFound = false
 
     @Before
     fun setUp() {
@@ -37,7 +35,7 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
         databaseHelper = DatabaseHelper(RuntimeEnvironment.application)
         database = databaseHelper.writableDatabase
 
-        scroller = ScrollingCursor(database, this)
+        scroller = ScrollingCursor(database, this, windowSize = 1000)
 
         val csvFile = File("app/src/test/resources/codigos_postais-$ENTRY_COUNT.csv")
         val asyncTask = CsvImporterTask(database, csvFile, this)
@@ -57,14 +55,22 @@ class ScrollingCursorTest : CsvImportListener, DatabaseQueryListener, ScrollingC
     }
 
     override fun onMoreResultsAvailable(positionStart: Int, rowCount: Int) {
-        while (currentRow < scroller.count()) {
-            if (desiredRow == scroller.getPostalCodeRow(currentRow))
-                desiredRowFound = true
-            currentRow += 1
-        }
+        super.onMoreResultsAvailable(positionStart, rowCount)
+        for (index in positionStart until rowCount)
+            scroller.getPostalCodeRow(index)
     }
 
     override fun onEndOfResults() {
+        super.onEndOfResults()
+        var desiredRowFound = false
+
+        for (index in 0 until scroller.count()) {
+            val postalCodeRow = scroller.getPostalCodeRow(index)
+            println("Postal code row $postalCodeRow")
+            if (desiredRow == postalCodeRow)
+                desiredRowFound = true
+        }
+
         Assert.assertTrue(desiredRowFound)
     }
 

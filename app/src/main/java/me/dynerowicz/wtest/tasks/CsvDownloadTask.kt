@@ -27,6 +27,10 @@ class CsvDownloadTask(
         }
     }
 
+    fun onFailed(reason: String?) {
+        downloadListener?.onDownloadFailed(reason ?: "Unknown reason")
+    }
+
     override fun onCancelled() {
         downloadListener?.onDownloadCancelled()
     }
@@ -70,6 +74,7 @@ class CsvDownloadTask(
                 Log.e(TAG, "Response code: ${connection.responseCode}")
         } catch (ioe: IOException) {
             Log.e(TAG, "Connection error: $ioe")
+            onFailed(ioe.message)
         }
 
         return Pair(contentAvailable, contentLength)
@@ -132,6 +137,7 @@ class CsvDownloadTask(
                         downloadCompleted = (totalBytesDownloaded == contentLength)
                     } catch (io: IOException) {
                         Log.e(TAG, io.toString())
+                        onFailed(io.message)
                     } finally {
                         inputStream?.close()
                     }
@@ -139,12 +145,14 @@ class CsvDownloadTask(
                     Log.e(TAG, "Request failed with code ${connection.responseCode}")
             } catch (io: IOException) {
                 Log.e(TAG, io.toString())
+                onFailed(io.message)
             } finally {
                 connection?.disconnect()
             }
         } catch (fnfe: FileNotFoundException) {
             // Given the parameters to openFileOutput(), When can this exception occur ?
             Log.e(TAG, fnfe.toString())
+            onFailed(fnfe.message)
         } finally {
             // If the output file was successfully opened, close it and delete the partial content if the download did not succeed
             outputStream?.close()

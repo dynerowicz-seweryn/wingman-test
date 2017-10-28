@@ -6,6 +6,7 @@ import android.util.Log
 import me.dynerowicz.wtest.database.DatabaseContract
 import me.dynerowicz.wtest.presenter.PostalCodeRow
 import me.dynerowicz.wtest.utils.parseCsvLine
+import org.apache.commons.lang3.StringUtils
 import java.io.File
 import java.io.IOException
 
@@ -15,7 +16,6 @@ class CsvImporterTask(
         private val csvFile: File,
         private val importListener: CsvImportListener?
 ) : AsyncTask<Unit, Int, Pair<Long, Long>>() {
-    private var localityIdentifiers = HashMap<String, Long>()
 
     private fun determineEntryCount(csvFile: File): Long {
         val reader = csvFile.bufferedReader()
@@ -127,23 +127,34 @@ class CsvImporterTask(
 
         csvFileReader.close()
 
-        database.execSQL(DatabaseContract.CREATE_POSTAL_CODES_INDEX)
-        database.execSQL(DatabaseContract.CREATE_LOCALITY_ID_INDEX)
-
         return Pair(importedEntriesCount, invalidEntriesCount)
     }
 
     // Database insertion operation
-    private val insertIntoLocalityNames = database.compileStatement(DatabaseContract.INSERT_INTO_LOCALITY_NAMES_STATEMENT)
-    private val insertIntoPostalCodes = database.compileStatement(DatabaseContract.INSERT_INTO_POSTAL_CODES_STATEMENT)
+    private var localityIdentifiers = HashMap<String, Long>()
+    private var normalizedNamesIdentifiers = HashMap<String, Long>()
+
+    private val insertIntoNormalizedNames = database.compileStatement(DatabaseContract.INSERT_NORMALIZED_NAME)
+    private val insertIntoLocalityNames = database.compileStatement(DatabaseContract.INSERT_LOCALITY)
+    private val insertIntoPostalCodes = database.compileStatement(DatabaseContract.INSERT_POSTAL_CODE)
     private fun insertPostalCode(postalCode: Long, extension: Long, locality: String) {
         val localityIdentifier: Long = localityIdentifiers[locality] ?:
             insertIntoLocalityNames.run {
-                bindString(1, locality)
-                val assignedIdentifier = executeInsert()
-                localityIdentifiers.put(locality, assignedIdentifier)
-                assignedIdentifier
-            }
+                val normalizedLocalityName = StringUtils.stripAccents(locality)
+                val normalizedIdentifier = normalizedNamesIdentifiers[normalizedLocalityName] ?:
+                    insertIntoNormalizedNames.run {
+                        bindString(1, normalizedLocalityName)
+                        val assignedIdentifier = executeInsert()
+                        normalizedNamesIdentifiers.put(normalizedLocalityName, assignedIdentifier)
+                        assignedIdentifier
+                    }
+
+                    bindString(1, locality)
+                    bindLong(2, normalizedIdentifier)
+                    val assignedIdentifier = executeInsert()
+                    localityIdentifiers.put(locality, assignedIdentifier)
+                    assignedIdentifier
+                }
 
         insertIntoPostalCodes.run {
             clearBindings()

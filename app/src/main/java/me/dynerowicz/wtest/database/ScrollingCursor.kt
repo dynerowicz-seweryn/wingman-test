@@ -40,7 +40,7 @@ class ScrollingCursor(
     fun getPostalCodeRow(position: Int): PostalCodeRow {
         if (!endOfResultsReached && (position == count - threshold)) {
             Log.v(tag, "Threshold passed: initiating next query")
-            queryBuilder.starting = currentFinal
+            queryBuilder.startingPostalCodeRow = currentFinal
             DatabaseQueryTask(database, this, appendTo = postalCodeRows).execute(queryBuilder)
         }
 
@@ -52,17 +52,16 @@ class ScrollingCursor(
     override fun onQueryComplete(results: Cursor) {
         super.onQueryComplete(results)
 
-        currentFinal = postalCodeRows.last()
+        if (postalCodeRows.isNotEmpty())
+            currentFinal = postalCodeRows.last()
+
         val oldCount = count
         count += results.count
 
-        if (results.count < windowSize) {
-            endOfResultsReached = true
-            listener.onEndOfResults()
-        }
-
         if (results.count > 0)
             listener.onMoreResultsAvailable(oldCount, results.count)
+        else
+            listener.onEndOfResults()
 
         results.close()
     }

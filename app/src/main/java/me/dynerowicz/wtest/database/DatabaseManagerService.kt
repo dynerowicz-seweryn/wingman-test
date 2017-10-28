@@ -105,6 +105,7 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
     }
 
     override fun onDownloadComplete(success: Boolean) {
+        super.onDownloadComplete(success)
         if (success) {
             notificationBuilder.setContentText("Preparing CSV import ...")
             notificationBuilder.setProgress(100, 0, true)
@@ -112,6 +113,13 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
 
             importer?.execute()
         }
+    }
+
+    override fun onDownloadFailed(reason: String) {
+        super.onDownloadFailed(reason)
+        notificationBuilder.setContentText("Download failed.")
+        notificationManager.notify(notificationId, notificationBuilder.build())
+        cachedCsvFile.delete()
     }
 
     override fun onDownloadCancelled() {

@@ -55,7 +55,7 @@ class CsvImporterTask314772EntriesTest : CsvImportListener {
 
     @Test
     fun testHasEntriesInTableLocalityNames() {
-        val query = "SELECT * FROM ${DatabaseContract.LOCALITY_NAMES_TABLE}"
+        val query = "SELECT * FROM ${DatabaseContract.LOCALITIES_TABLE}"
         val cursor = database.rawQuery(query, null)
         println("Results count : ${cursor.count}")
         cursor.close()

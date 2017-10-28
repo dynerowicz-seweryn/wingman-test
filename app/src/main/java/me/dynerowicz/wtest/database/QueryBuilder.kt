@@ -2,6 +2,7 @@ package me.dynerowicz.wtest.database
 
 import android.util.Log
 import me.dynerowicz.wtest.presenter.PostalCodeRow
+import org.apache.commons.lang3.StringUtils
 
 class QueryBuilder(
     val limitTo: Int = -1,
@@ -11,7 +12,7 @@ class QueryBuilder(
     private var postalCodeWithExtensionMaximum: Long? = null
     private var localityKeywords = ArrayList<String>()
 
-    var starting: PostalCodeRow? = null
+    var startingPostalCodeRow: PostalCodeRow? = null
 
     init {
         var postalCodeFound = false
@@ -44,36 +45,49 @@ class QueryBuilder(
         val stringBuilder = StringBuilder()
 
         // Constructing the projection
-        stringBuilder.append("SELECT DISTINCT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_LOCALITY_NAME}")
-        stringBuilder.append(" FROM ${DatabaseContract.LOCALITY_NAMES_TABLE} LN")
-        stringBuilder.append(" INNER JOIN ${DatabaseContract.POSTAL_CODES_TABLE} PC")
-        stringBuilder.append(" ON PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER} == LN.${DatabaseContract.COLUMN_LOCALITY_NAME_ID}")
+        stringBuilder.append("SELECT DISTINCT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_NAME}")
 
-        if (starting != null || postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null || localityKeywords.isNotEmpty()) {
+        if (localityKeywords.isNotEmpty()) {
+            stringBuilder.append(" FROM ${DatabaseContract.LOCALITY_NORMALIZED_NAMES_TABLE} NN")
+            stringBuilder.append(" LEFT JOIN ${DatabaseContract.LOCALITIES_TABLE} LN")
+            stringBuilder.append(" ON NN.${DatabaseContract.COLUMN_ID} == LN.${DatabaseContract.COLUMN_NORMALIZED_NAME_IDENTIFIER}")
+            stringBuilder.append(" LEFT JOIN ${DatabaseContract.POSTAL_CODES_TABLE} PC")
+            stringBuilder.append(" ON LN.${DatabaseContract.COLUMN_ID} == PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER}")
+        } else {
+            stringBuilder.append(" FROM ${DatabaseContract.POSTAL_CODES_TABLE} PC")
+            stringBuilder.append(" LEFT JOIN ${DatabaseContract.LOCALITIES_TABLE} LN")
+            stringBuilder.append(" ON LN.${DatabaseContract.COLUMN_ID} == PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER}")
+        }
+
+        if(localityKeywords.isNotEmpty() || startingPostalCodeRow != null || postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null) {
             stringBuilder.append(" WHERE ")
 
+            // First the locality keywords to match against the Normalized Names table
+            if (localityKeywords.isNotEmpty()) {
+                localityKeywords.forEachIndexed { index, keyword ->
+                    stringBuilder.appendLocalityConstraint(keyword)
+                    if (index < localityKeywords.size - 1)
+                        stringBuilder.append(" AND ")
+                }
+                if (startingPostalCodeRow != null || postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null)
+                    stringBuilder.append(" AND ")
+            }
+
             // Constructing the remainder of the WHERE clause
+            val starting = startingPostalCodeRow
             if (starting != null) {
-                stringBuilder.appendStarting(starting)
-                if (postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null || localityKeywords.isNotEmpty())
-                stringBuilder.append(" AND ")
-            }
-
-            if (postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null) {
+                stringBuilder.appendStartingConstraint(starting, postalCodeWithExtensionMaximum)
+            } else if (postalCodeWithExtensionMinimum != null || postalCodeWithExtensionMaximum != null) {
                 stringBuilder.appendPostalCodeConstraint(postalCodeWithExtensionMinimum, postalCodeWithExtensionMaximum)
-                if (localityKeywords.isNotEmpty())
-                    stringBuilder.append(" AND ")
-            }
-
-            localityKeywords.forEachIndexed { index, keyword ->
-                stringBuilder.appendLocalityConstraint(keyword)
-                if (index < localityKeywords.size - 1)
-                    stringBuilder.append(" AND ")
             }
         }
 
         // Constructing the ORDER BY clause
-        stringBuilder.append(" ORDER BY LN.${DatabaseContract.COLUMN_LOCALITY_NAME}, PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
+        stringBuilder.append(" ORDER BY "
+                + "PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}"
+                + ","
+                + "LN.${DatabaseContract.COLUMN_NAME}"
+        )
 
         // Constructing the LIMIT clause
         if (limitTo > 0)
@@ -85,61 +99,30 @@ class QueryBuilder(
     companion object {
         val TAG = QueryBuilder::class.java.simpleName
     }
-
-
 }
 
-//TODO: this is awful ...
-private fun expandedKeywords(expanded: MutableList<String>, keyword: String, index: Int = 0, partialKeyword: StringBuilder = StringBuilder()) {
-    if (index == keyword.length)
-        expanded.add(partialKeyword.toString())
+private fun StringBuilder.appendPostalCodeConstraint(minimum: Long?, maximum: Long?) {
+    if (minimum != null && maximum != null)
+        append("(PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} BETWEEN $minimum AND $maximum)")
     else {
-        val character = keyword[index]
-        val cases: String =
-            when (character) {
-                'a'  -> "aâãà"
-                'e'  -> "eéê"
-                'i'  -> "ií"
-                'o'  -> "oóôõ"
-                'u'  -> "uú"
-                else -> character.toString()
-            }
-        cases.forEach { characterAlternative ->
-            partialKeyword.append(characterAlternative)
-            expandedKeywords(expanded, keyword, index + 1, partialKeyword)
-            partialKeyword.deleteCharAt(index)
-        }
+        if (minimum != null)
+            append("$minimum <= PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
+        else
+            append("PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum")
     }
+}
+
+private fun StringBuilder.appendStartingConstraint(postalCodeRow: PostalCodeRow, maximum: Long?) {
+    val pcMinimum = postalCodeRow.postalCodeWithExtension
+    append("(($pcMinimum <  PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}) OR")
+    append(" ($pcMinimum  == PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} AND")
+    append(" '${postalCodeRow.locality}' < LN.${DatabaseContract.COLUMN_NAME}))")
+    if (maximum != null)
+        append(" AND (PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum)")
 }
 
 private fun StringBuilder.appendLocalityConstraint(keyword: String) {
-    val expandedKeywords = ArrayList<String>()
-    expandedKeywords(expandedKeywords, keyword.toLowerCase())
-
-    append('(')
-    expandedKeywords.forEachIndexed { index, expandedKeyword ->
-        append("(LN.${DatabaseContract.COLUMN_LOCALITY_NAME} LIKE '%$expandedKeyword%' OR ")
-        append(" LN.${DatabaseContract.COLUMN_LOCALITY_NAME} LIKE '%${expandedKeyword.capitalize()}%')")
-        if (index < expandedKeywords.size - 1)
-            append(" OR ")
-    }
-    append(')')
-}
-
-private fun StringBuilder.appendStarting(pcRow: PostalCodeRow?) {
-    if(pcRow != null) {
-        append("(${pcRow.postalCodeWithExtension} <= PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} AND ")
-        append("'${pcRow.locality}' <= LN.${DatabaseContract.COLUMN_LOCALITY_NAME})")
-    }
-}
-
-private fun StringBuilder.appendPostalCodeConstraint(minimum: Long? = null, maximum: Long? = null) {
-    if (minimum != null)
-        append("$minimum <= PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}")
-
-    if (minimum != null && maximum != null)
-        append(" AND ")
-
-    if (maximum != null)
-        append("PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION} <= $maximum")
+    val sanitizedKeyword = StringUtils.stripAccents(keyword.decapitalize())
+    append("(NN.${DatabaseContract.COLUMN_NAME} LIKE '%$sanitizedKeyword%' OR ")
+    append(" NN.${DatabaseContract.COLUMN_NAME} LIKE '%${sanitizedKeyword.capitalize()}%')")
 }

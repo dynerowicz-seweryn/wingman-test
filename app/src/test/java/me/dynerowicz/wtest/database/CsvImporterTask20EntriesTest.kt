@@ -1,7 +1,6 @@
 package me.dynerowicz.wtest.database
 
 import android.database.sqlite.SQLiteDatabase
-import android.provider.BaseColumns
 import me.dynerowicz.wtest.tasks.CsvImporterTask
 import org.junit.After
 import org.junit.Assert
@@ -56,9 +55,9 @@ class CsvImporterTask20EntriesTest {
 
     @Test
     fun databaseContainsStuff() {
-        val query = " SELECT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_LOCALITY_NAME} " +
-                    " FROM ${DatabaseContract.POSTAL_CODES_TABLE} PC INNER JOIN ${DatabaseContract.LOCALITY_NAMES_TABLE} LN " +
-                    " WHERE PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER} == LN.${DatabaseContract.COLUMN_LOCALITY_NAME_ID}"
+        val query = " SELECT PC.${DatabaseContract.COLUMN_POSTAL_CODE_WITH_EXTENSION}, LN.${DatabaseContract.COLUMN_NAME} " +
+                    " FROM ${DatabaseContract.POSTAL_CODES_TABLE} PC INNER JOIN ${DatabaseContract.LOCALITIES_TABLE} LN " +
+                    " WHERE PC.${DatabaseContract.COLUMN_LOCALITY_IDENTIFIER} == LN.${DatabaseContract.COLUMN_ID}"
         val cursor = database.rawQuery(query, null)
 
         while(cursor.moveToNext())
@@ -71,6 +70,11 @@ class CsvImporterTask20EntriesTest {
     fun databaseContains3750043() {
         val query = QueryBuilder(inputs = "3750043").toString()
         val cursor = database.rawQuery(query, null)
+
+        while (cursor.moveToNext()) {
+            println("Postal code row : ${cursor.getLong(0)}, ${cursor.getString(1)}")
+        }
+
         Assert.assertTrue(cursor.count == 1)
         cursor.close()
     }
