@@ -1,5 +1,6 @@
 package me.dynerowicz.wtest
 
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.support.v4.app.Fragment
@@ -11,13 +12,22 @@ import android.view.ViewGroup
 import kotlinx.android.synthetic.main.fragment_search.*
 import me.dynerowicz.wtest.database.ScrollingCursor
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
+import android.content.Context.INPUT_METHOD_SERVICE
+import android.view.inputmethod.InputMethodManager
+
 
 class SearchFragment : Fragment(), View.OnClickListener {
-
     private var recyclerViewAdapter = PostalCodeRowAdapter()
+
+    private lateinit var keyboardManager: InputMethodManager
 
     var database: SQLiteDatabase? = null
     var scroller: ScrollingCursor? = null
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        keyboardManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    }
 
     override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? =
@@ -25,18 +35,27 @@ class SearchFragment : Fragment(), View.OnClickListener {
 
     override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        buttonSearch.setOnClickListener(this)
 
-        fieldSearchResults.setHasFixedSize(true)
-        fieldSearchResults.adapter = recyclerViewAdapter
-        fieldSearchResults.layoutManager = LinearLayoutManager(context)
+        button_search.setOnClickListener(this)
+
+        field_search_results.setHasFixedSize(true)
+        field_search_results.adapter = recyclerViewAdapter
+        field_search_results.layoutManager = LinearLayoutManager(context)
     }
 
     override fun onClick(p0: View?) {
         when (p0) {
-            buttonSearch -> performSearch(field_search.text.toString())
+            button_search -> {
+                performSearch(field_search.text.toString())
+                keyboardManager.hideSoftInputFromWindow(field_search.windowToken, 0)
+            }
             else -> Log.e(TAG, "Unknown view clicked: ${p0?.id}")
         }
+    }
+    
+    override fun onDestroyView() {
+        keyboardManager.hideSoftInputFromWindow(field_search.windowToken, 0)
+        super.onDestroyView()
     }
 
     private fun performSearch(searchInput: String) {

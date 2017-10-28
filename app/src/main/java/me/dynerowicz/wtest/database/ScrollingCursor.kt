@@ -10,7 +10,7 @@ import me.dynerowicz.wtest.tasks.DatabaseQueryTask
 class ScrollingCursor(
         private val database: SQLiteDatabase,
         private val listener: ScrollingCursorObserver,
-        private val windowSize: Int = 30,
+        private val windowSize: Int = 50,
         private val threshold: Int = windowSize
 ) : DatabaseQueryListener {
 
