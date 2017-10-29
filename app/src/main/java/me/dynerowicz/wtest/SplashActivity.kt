@@ -10,20 +10,22 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import kotlinx.android.synthetic.main.activity_splash.*
-import me.dynerowicz.wtest.database.DatabaseManagerService
+import me.dynerowicz.wtest.database.DatabaseInitializerService
 
 class SplashActivity : AppCompatActivity() {
+    private val TAG = "SplashActivity"
 
     private val dbManagerReceiver = DbManagerServiceBroadcastReceiver()
-    private val dbManagerIntentFilter = IntentFilter(DatabaseManagerService.INITIALIZATION_STATUS)
+    private val dbManagerIntentFilter = IntentFilter(DatabaseInitializerService.INITIALIZATION_STATUS)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
         val managerSettings = PreferenceManager.getDefaultSharedPreferences(this)
-        if (!managerSettings.contains(DatabaseManagerService.DATABASE_INITIALIZED))
-            startService(Intent(this, DatabaseManagerService::class.java))
+        Log.v(TAG, "Database Initialized ? ${managerSettings.contains(DatabaseInitializerService.DATABASE_INITIALIZED)}")
+        if (!managerSettings.contains(DatabaseInitializerService.DATABASE_INITIALIZED))
+            startService(Intent(this, DatabaseInitializerService::class.java))
         else
             moveToMainActivity()
     }
@@ -47,15 +49,15 @@ class SplashActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action
             when (action) {
-                DatabaseManagerService.INITIALIZATION_STATUS -> {
-                    val operation = intent.getStringExtra(DatabaseManagerService.OPERATION)
-                    val status = intent.getStringExtra(DatabaseManagerService.STATUS)
-                    val progress = intent.getIntExtra(DatabaseManagerService.PROGRESS, -1)
+                DatabaseInitializerService.INITIALIZATION_STATUS -> {
+                    val operation = intent.getStringExtra(DatabaseInitializerService.OPERATION)
+                    val status = intent.getStringExtra(DatabaseInitializerService.STATUS)
+                    val progress = intent.getIntExtra(DatabaseInitializerService.PROGRESS, -1)
 
                     val pretty = prettyString(operation, status, progress)
                     Log.v(tag, "DatabaseInitializationService: Initialization status: $pretty")
 
-                    if (operation == DatabaseManagerService.INITIALIZATION && status == DatabaseManagerService.COMPLETED) {
+                    if (operation == DatabaseInitializerService.INITIALIZATION && status == DatabaseInitializerService.COMPLETED) {
                         Thread.sleep(500)
                         moveToMainActivity()
                     } else {

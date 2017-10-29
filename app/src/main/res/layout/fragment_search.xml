@@ -24,7 +24,6 @@
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/field_search_results"
-        android:isScrollContainer="true"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scrollbars="vertical"

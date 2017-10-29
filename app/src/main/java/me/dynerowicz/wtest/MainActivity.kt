@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.support.design.widget.BottomNavigationView
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.MenuItem
 import kotlinx.android.synthetic.main.activity_main.*
 
@@ -23,8 +24,13 @@ class MainActivity : AppCompatActivity(), BottomNavigationView.OnNavigationItemS
         bottomNavigation.setOnNavigationItemSelectedListener(this)
 
         supportFragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, currentFragment)
-                .commit()
+            .replace(R.id.fragmentContainer, currentFragment)
+            .commit()
+    }
+
+    override fun onDestroy() {
+        search.cleanup()
+        super.onDestroy()
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {

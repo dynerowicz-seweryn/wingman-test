@@ -5,21 +5,24 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
+import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import kotlinx.android.synthetic.main.fragment_search.*
 import me.dynerowicz.wtest.database.ScrollingCursor
 import me.dynerowicz.wtest.presenter.PostalCodeRowAdapter
 import android.view.inputmethod.InputMethodManager
+import kotlinx.android.synthetic.main.fragment_search.*
 import me.dynerowicz.wtest.database.DatabaseHelper
 
 
-class SearchFragment : Fragment(), View.OnClickListener {
+class SearchFragment : Fragment(), View.OnClickListener, View.OnLayoutChangeListener {
+
     private var recyclerViewAdapter = PostalCodeRowAdapter()
 
     private lateinit var keyboardManager: InputMethodManager
+    private lateinit var layoutManager: LinearLayoutManager
 
     var dbHelper: DatabaseHelper? = null
     var database: SQLiteDatabase? = null
@@ -38,6 +41,7 @@ class SearchFragment : Fragment(), View.OnClickListener {
     override fun onAttach(context: Context) {
         super.onAttach(context)
         keyboardManager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        layoutManager = LinearLayoutManager(context)
     }
 
     override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?,
@@ -47,13 +51,20 @@ class SearchFragment : Fragment(), View.OnClickListener {
     override fun onViewCreated(view: View?, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        
-
         button_search.setOnClickListener(this)
 
+        field_search_results.addOnLayoutChangeListener(this)
         field_search_results.setHasFixedSize(true)
         field_search_results.adapter = recyclerViewAdapter
-        field_search_results.layoutManager = LinearLayoutManager(context)
+        field_search_results.layoutManager = layoutManager
+    }
+
+    override fun onLayoutChange(view: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
+        Log.v(TAG, "onLayoutChange ...")
+        if (view == field_search_results) {
+            Log.v(TAG, "onLayoutChange in Search Results")
+            field_search_results.scrollBy(0, oldBottom - bottom)
+        }
     }
 
     override fun onClick(view: View?) {

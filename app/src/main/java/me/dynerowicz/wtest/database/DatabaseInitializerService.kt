@@ -18,7 +18,7 @@ import me.dynerowicz.wtest.tasks.CsvImporterTask
 import java.io.File
 import java.net.URL
 
-class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener {
+class DatabaseInitializerService : Service(), CsvDownloadListener, CsvImportListener {
     private lateinit var databaseHelper: DatabaseHelper
     private lateinit var database: SQLiteDatabase
 
@@ -37,8 +37,6 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
 
     override fun onCreate() {
         super.onCreate()
-
-        databaseHelper = DatabaseHelper(this)
 
         managerSettings = PreferenceManager.getDefaultSharedPreferences(this)
 
@@ -104,6 +102,7 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
     private fun initializeDatabase() {
         publishReport(operation = INITIALIZATION, status = STARTING)
 
+        databaseHelper = DatabaseHelper(this)
         database = databaseHelper.writableDatabase
 
         notificationBuilder.setContentText("Preparing download ...")
@@ -122,8 +121,9 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
 
     private fun terminate() {
         cachedCsvFile.delete()
+        database.close()
         databaseHelper.close()
-        stopForeground(true)
+        stopForeground(false)
         stopSelf()
     }
 
@@ -152,6 +152,8 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
 
         publishReport(operation = IMPORT, status = COMPLETED)
         publishReport(operation = INITIALIZATION, status = COMPLETED)
+
+        terminate()
     }
 
     override fun onImportCancelled() {
@@ -193,7 +195,7 @@ class DatabaseManagerService : Service(), CsvDownloadListener, CsvImportListener
             }.toString()
     
     companion object {
-        private const val TAG = "DatabaseManagerService"
+        private const val TAG = "DatabaseInitializer"
         private const val FILENAME = "postalCodes.csv"
         const val DATABASE_INITIALIZED = "DatabaseInitialized"
 
