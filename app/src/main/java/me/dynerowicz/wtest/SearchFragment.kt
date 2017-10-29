@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.widget.LinearLayoutManager
-import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -27,6 +26,8 @@ class SearchFragment : Fragment(), View.OnClickListener, View.OnLayoutChangeList
     var dbHelper: DatabaseHelper? = null
     var database: SQLiteDatabase? = null
     var scroller: ScrollingCursor? = null
+
+    private var storedBottom = 0
 
     fun initialize(context: Context) {
         dbHelper = DatabaseHelper(context)
@@ -62,8 +63,10 @@ class SearchFragment : Fragment(), View.OnClickListener, View.OnLayoutChangeList
     override fun onLayoutChange(view: View?, left: Int, top: Int, right: Int, bottom: Int, oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
         Log.v(TAG, "onLayoutChange ...")
         if (view == field_search_results) {
-            Log.v(TAG, "onLayoutChange in Search Results")
-            field_search_results.scrollBy(0, oldBottom - bottom)
+            val previousBottom = if (oldBottom > 0) oldBottom else storedBottom
+            Log.v(TAG, "onLayoutChange in Search Results $previousBottom -> $bottom = ${previousBottom - bottom}")
+            field_search_results.scrollBy(0, previousBottom - bottom)
+            storedBottom = bottom
         }
     }
 
